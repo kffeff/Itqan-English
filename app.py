@@ -1,209 +1,168 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منصة إتقان اللغة الإنجليزية</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+import streamlit as st
+import json
+import os
+import asyncio
+import edge_tts
+import random
+import base64
+
+# --- 1. إعدادات الصفحة والجمالية (تعديل العرض) ---
+st.set_page_config(page_title="منصة إتقان اللغة الإنجليزية", layout="wide", initial_sidebar_state="expanded")
+
+# كود CSS المطور للجعل الكلمات في سطر واحد وإصلاح العرض
+st.markdown("""
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f8ff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
+    /* إخفاء الزوائد */
+    #MainMenu, footer, header, .stDeployButton {visibility: hidden;}
+    
+    /* الخلفية الحيوية */
+    .stApp {
+        background-color: #f0faff;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='%23d0efff' fill-opacity='0.5'%3E%3Cpath d='M30 30h2v2h-2z'/%3E%3C/g%3E%3C/svg%3E");
+    }
 
-        h1 { color: #2c7be5; margin-bottom: 30px; }
+    /* تصميم البطاقة العرضية (Horizontal Card) */
+    .card {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 20px;
+        border-left: 10px solid #007bff;
+        margin-bottom: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column; /* ترتيب العناصر تحت بعض لكن بعرض كامل السطر */
+        width: 100%;
+    }
 
-        /* حاوية البطاقة */
-        .card {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            width: 90%;
-            max-width: 500px;
-            text-align: center;
-            border-right: 8px solid #2c7be5;
-            position: relative;
-        }
+    /* جعل الكلمات الإنجليزية والعربية في سطر واحد قدر الإمكان */
+    .text-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap; /* للسماح بالنزول في حال كانت الجملة طويلة جداً */
+        gap: 15px;
+    }
 
-        .english-text {
-            font-size: 28px;
-            color: #1e3a8a;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
+    .en-text { font-size: 28px; font-weight: 800; color: #1a1a1a; flex: 1; min-width: 250px; }
+    .ar-text { font-size: 22px; color: #007bff; direction: rtl; font-weight: 600; flex: 1; text-align: right; }
+    
+    /* سطر النطق (كبير وواضح) */
+    .pron-box {
+        margin-top: 15px;
+        background-color: #fff0f3;
+        padding: 10px 20px;
+        border-radius: 12px;
+        border: 1px dashed #ff4d6d;
+        color: #ff4d6d;
+        font-size: 24px;
+        font-weight: bold;
+        text-align: center;
+    }
 
-        .arabic-translation {
-            font-size: 22px;
-            color: #10b981;
-            margin-bottom: 20px;
-        }
-
-        /* تعديل سطر النطق ليصبح في سطر واحد وواضح */
-        .phonetic-box {
-            border: 2px dashed #ef4444;
-            padding: 15px;
-            border-radius: 12px;
-            background-color: #fff5f5;
-            font-size: 26px; /* تكبير الخط */
-            color: #b91c1c;
-            font-weight: 900;
-            white-space: nowrap; /* منع الانقسام لسطرين */
-            overflow-x: auto; /* السماح بالتمرير البسيط إذا كانت الجملة طويلة جداً */
-            display: block;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        /* زر الصوت */
-        .play-btn {
-            margin-top: 20px;
-            background: #2c7be5;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        /* أيقونة الإعدادات الجانبية */
-        .settings-container {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-        }
-
-        .settings-icon {
-            font-size: 24px;
-            color: #64748b;
-            cursor: pointer;
-        }
-
-        .voice-selector {
-            display: none; /* مخفية افتراضياً */
-            position: absolute;
-            top: 40px;
-            left: 0;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 10px;
-            z-index: 100;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .voice-selector.active {
-            display: block;
-        }
-
-        select {
-            padding: 5px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
+    /* نصوص الإدارة سوداء */
+    label, p, span, .stSelectbox label { color: black !important; font-weight: bold !important; }
     </style>
-</head>
-<body>
+    """, unsafe_allow_html=True)
 
-    <h1>منصة إتقان اللغة الإنجليزية</h1>
+# --- 2. وظائف الصوت المتقدمة (حل مشكلة الآيفون) ---
+DB_FILE = "data.json"
+AUDIO_DIR = "audio"
+if not os.path.exists(AUDIO_DIR): os.makedirs(AUDIO_DIR)
 
-    <div class="card">
-        <div class="settings-container">
-            <i class="fas fa-cog settings-icon" onclick="toggleVoices()"></i>
-            <div id="voiceMenu" class="voice-selector">
-                <label style="font-size: 12px; display: block;">اختر الصوت:</label>
-                <select id="voiceSelect"></select>
-            </div>
-        </div>
+VOICES = {
+    "🎙️ رجل أمريكي (Guy)": "en-US-GuyNeural",
+    "🎙️ امرأة أمريكية (Ava)": "en-US-AvaNeural",
+    "🎙️ صوت بريطاني (Sonia)": "en-GB-SoniaNeural"
+}
 
-        <div class="english-text" id="textToSpeak">The patient needs urgent care</div>
-        <div class="arabic-translation">المريض يحتاج لرعاية عاجلة</div>
+def load_data():
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r", encoding="utf-8") as f: return json.load(f)
+    return {"categories": {}, "favorites": []}
+
+def save_data(data):
+    with open(DB_FILE, "w", encoding="utf-8") as f: json.dump(data, f, ensure_ascii=False, indent=4)
+
+async def generate_voice(text, filename, voice_key, rate):
+    communicate = edge_tts.Communicate(text, VOICES[voice_key], rate=rate)
+    await communicate.save(os.path.join(AUDIO_DIR, filename))
+
+# وظيفة تشفير الصوت ليعمل على الآيفون
+def get_audio_html(file_path):
+    with open(file_path, "rb") as f:
+        data = f.read()
+        b64 = base64.b64encode(data).decode()
+        return f'<audio controls style="width: 100%; height: 40px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
+
+data = load_data()
+categories = list(data["categories"].keys())
+is_admin = st.query_params.get("admin") == "true"
+
+# --- 3. القائمة الجانبية (Sidebar) ---
+with st.sidebar:
+    st.markdown("<h2 style='text-align:center;'>⚙️ الإعدادات</h2>", unsafe_allow_html=True)
+    u_voice = st.selectbox("اختر الصوت:", list(VOICES.keys()))
+    u_speed = st.slider("سرعة النطق (يفضل -15%):", -50, 10, -15, step=5)
+    st.divider()
+    app_mode = st.radio("النمط:", ["📚 تعلم", "🧠 اختبار"])
+    search_q = st.text_input("🔍 بحث:")
+
+# --- 4. لوحة الإدارة ---
+if is_admin:
+    st.title("🛠 لوحة الإدارة")
+    t1, t2 = st.tabs(["إضافة", "إدارة"])
+    with t1:
+        new_c = st.text_input("قسم جديد:")
+        if st.button("حفظ القسم"):
+            data["categories"][new_c] = []; save_data(data); st.rerun()
+        if categories:
+            target = st.selectbox("إضافة إلى:", categories)
+            raw = st.text_area("جملة | ترجمة | نطق")
+            if st.button("🚀 حفظ"):
+                for line in raw.strip().split('\n'):
+                    parts = [p.strip() for p in line.split("|")]
+                    if len(parts) == 3:
+                        data["categories"][target].append({"en": parts[0], "ar": parts[1], "pron": parts[2]})
+                save_data(data); st.success("تم الحفظ!"); st.rerun()
+    with t2:
+        if categories:
+            cat_del = st.selectbox("حذف قسم:", categories)
+            if st.button("🔥 حذف القسم نهائياً"):
+                del data["categories"][cat_del]; save_data(data); st.rerun()
+
+# --- 5. واجهة الطالب (العرض العرضي) ---
+else:
+    st.markdown("<h1 style='text-align: center; color: #007bff;'>منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
+    
+    if categories:
+        choice = st.selectbox("اختر الوحدة الدراسية:", categories)
+        items = data["categories"][choice]
         
-        <div class="phonetic-box">
-            ذا بيشنت نيدز أورجينت كير
-        </div>
+        if search_q:
+            items = [i for i in items if search_q.lower() in i['en'].lower()]
 
-        <button class="play-btn" onclick="speakText()">
-            <i class="fas fa-volume-up"></i> استماع للنطق
-        </button>
-    </div>
-
-    <script>
-        let synth = window.speechSynthesis;
-        let voiceSelect = document.querySelector('#voiceSelect');
-        let voices = [];
-
-        // حل مشكلة الآيفون: تفعيل الصوت عند أول تفاعل للمستخدم
-        function unlockAudio() {
-            if (synth.speaking) return;
-            const utter = new SpeechSynthesisUtterance('');
-            synth.speak(utter);
-            console.log("Audio Unlocked for iOS");
-            window.removeEventListener('touchstart', unlockAudio);
-            window.removeEventListener('click', unlockAudio);
-        }
-        window.addEventListener('touchstart', unlockAudio);
-        window.addEventListener('click', unlockAudio);
-
-        // تحميل الأصوات المتاحة
-        function loadVoices() {
-            voices = synth.getVoices();
-            voiceSelect.innerHTML = '';
-            voices.forEach((voice, i) => {
-                if (voice.lang.includes('en')) { // حصر الأصوات بالإنجليزية فقط
-                    let option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = `${voice.name} (${voice.lang})`;
-                    voiceSelect.appendChild(option);
-                }
-            });
-        }
-
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = loadVoices;
-        }
-        loadVoices();
-
-        // وظيفة النطق مع معالجة السرعة والوضوح
-        function speakText() {
-            if (synth.speaking) synth.cancel();
+        for idx, item in enumerate(items):
+            # البطاقة العرضية
+            st.markdown(f"""
+            <div class="card">
+                <div class="text-row">
+                    <div class="en-text">{item['en']}</div>
+                    <div class="ar-text">{item['ar']}</div>
+                </div>
+                <div class="pron-box">{item['pron']}</div>
+            </div>
+            """, unsafe_allow_html=True)
             
-            let text = document.getElementById('textToSpeak').innerText;
-            let utter = new SpeechSynthesisUtterance(text);
+            # منطق الصوت المطور للآيفون
+            v_tag = VOICES[u_voice].split('-')[2]
+            f_name = f"{item['en'][:10].replace(' ','_').lower()}_{v_tag}_{u_speed}.mp3"
+            f_path = os.path.join(AUDIO_DIR, f_name)
             
-            // اختيار الصوت المحدد
-            if (voices.length > 0) {
-                utter.voice = voices[voiceSelect.value];
-            }
-
-            // ضبط السرعة (0.7 تجعل النطق بطيئاً وواضحاً جداً)
-            utter.rate = 0.7; 
-            utter.pitch = 1;
-            utter.volume = 1;
-
-            synth.speak(utter);
-        }
-
-        // إظهار وإخفاء قائمة الأصوات
-        function toggleVoices() {
-            document.getElementById('voiceMenu').classList.toggle('active');
-        }
-
-        // إغلاق القائمة عند النقر خارجها
-        window.onclick = function(event) {
-            if (!event.target.matches('.settings-icon')) {
-                let menu = document.getElementById('voiceMenu');
-                if (menu.classList.contains('active')) {
-                    menu.classList.remove('active');
-                }
-            }
-        }
-    </script>
-</body>
-</html>
+            if not os.path.exists(f_path):
+                asyncio.run(generate_voice(item['en'], f_name, u_voice, f"{u_speed}%"))
+            
+            # عرض مشغل الصوت بطريقة HTML (الحل السحري للآيفون)
+            st.markdown(get_audio_html(f_path), unsafe_allow_html=True)
+            st.divider()
+    else:
+        st.info("أهلاً بك! استخدم ?admin=true للإدارة.")
