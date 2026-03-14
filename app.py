@@ -323,7 +323,7 @@ else:
     if not categories:
         st.info("مرحبا بك! يرجى اضافة اقسام من لوحة الادارة اولا.")
     else:
-        choice = st.selectbox("📂 اختر الوحدة الدراسية:", categories)
+        choice = st.selectbox("📂 اختر القسم الذي يناسبك:", categories)
         items = list(data["categories"].get(choice, []))
 
         if search_q:
