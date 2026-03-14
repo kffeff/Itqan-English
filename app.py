@@ -1,4 +1,4 @@
-سكربت كامل نهائي. استبدل به ملفimport streamlit as st
+import streamlit as st
 import os
 import json
 import asyncio
