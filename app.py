@@ -116,19 +116,23 @@ def run_async(coro):
 
 def generate_voice(text: str, out_filename: str, voice_id: str, rate_percent: int) -> bool:
     """
-    يُنشئ ملف صوتي بصيغة mp3 باستخدام edge-tts.
-    rate_percent: عدد سالب أو موجب يمثل نسبة السرعة، مثال -30
-    يعيد True عند النجاح و False عند الفشل (مع طباعة الخطأ في الواجهة).
+    يولّد صوتاً للكلمة الإنجليزية فقط بسرعة بطيئة وواضحة.
+    يستخدم معامل rate الخاص بـ edge-tts لضمان وضوح النطق.
     """
     out_path = os.path.join(AUDIO_DIR, out_filename)
-    # بناء SSML مع prosody للتحكم بالسرعة بدقة
-    rate_str = f"{rate_percent}%"
-    ssml = f"<speak><prosody rate='{rate_str}'>{text}</prosody></speak>"
+
     try:
-        run_async(_generate_voice_async(ssml, out_path, voice_id))
+        communicate = edge_tts.Communicate(
+            text=text,                 # الكلمة الإنجليزية فقط
+            voice=voice_id,            # الصوت المختار (رجالي / نسائي / بريطاني)
+            rate=f"{rate_percent}%"   # إبطاء النطق
+        )
+
+        run_async(communicate.save(out_path))
         return True
+
     except Exception as e:
-        st.error(f"فشل توليد الصوت: {e}")
+        st.error(f"خطأ في توليد الصوت: {e}")
         return False
 
 
