@@ -13,7 +13,8 @@ st.set_page_config(page_title="منصة إتقان اللغة الإنجليزي
 
 DB_FILE = "data.json"
 AUDIO_DIR = "audio_cache"
-os.makedirs("audio_cache", exist_ok=True)
+
+os.makedirs(AUDIO_DIR, exist_ok=True)
 
 VOICES = {
     "🎙️ صوت رجالي واضح": "en-US-GuyNeural",
@@ -97,6 +98,16 @@ async def tts_generate(text, voice, speed, path):
     )
     await communicate.save(path)
 
+def run_async(coro):
+    try:
+        return asyncio.run(coro)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(coro)
+        loop.close()
+        return result
+
 def generate_audio(text, voice, speed):
 
     unique_string = f"{text}_{voice}_{speed}"
@@ -106,23 +117,16 @@ def generate_audio(text, voice, speed):
     path = os.path.join(AUDIO_DIR, filename)
 
     if not os.path.exists(path):
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        loop.run_until_complete(
-            tts_generate(text, voice, speed, path)
-        )
-
-        loop.close()
+        run_async(tts_generate(text, voice, speed, path))
 
     with open(path,"rb") as f:
-        b64 = base64.b64encode(f.read()).decode()
+        audio_bytes = f.read()
+        b64 = base64.b64encode(audio_bytes).decode()
 
     audio_id = hashlib.md5((file_hash+"audio").encode()).hexdigest()
 
     html = f"""
-    <audio id="{audio_id}" controls>
+    <audio id="{audio_id}" controls preload="auto">
         <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
     </audio>
     """
@@ -133,8 +137,12 @@ def generate_audio(text, voice, speed):
 # إعدادات المستخدم
 # =========================
 with st.popover("⚙️"):
+
     voice_name = st.selectbox("اختر الصوت", list(VOICES.keys()))
     speed = st.slider("سرعة النطق", -50, 0, -30)
+
+    st.divider()
+
     search = st.text_input("بحث")
 
 voice_id = VOICES[voice_name]
@@ -164,10 +172,13 @@ if is_admin:
         new_cat = st.text_input("اسم القسم")
 
         if st.button("إضافة قسم"):
-            if new_cat:
-                data["categories"][new_cat] = []
-                save_data(data)
-                st.rerun()
+
+            if new_cat.strip():
+
+                if new_cat not in data["categories"]:
+                    data["categories"][new_cat] = []
+                    save_data(data)
+                    st.rerun()
 
         if data["categories"]:
 
@@ -181,7 +192,7 @@ if is_admin:
 
                     parts = [x.strip() for x in line.split("|")]
 
-                    if len(parts) == 3:
+                    if len(parts) == 3 and parts[0]:
 
                         data["categories"][target].append({
                             "en":parts[0],
@@ -199,19 +210,21 @@ if is_admin:
             cat = st.selectbox("اختر القسم", list(data["categories"].keys()))
 
             if st.button("حذف القسم"):
+
                 del data["categories"][cat]
                 save_data(data)
                 st.rerun()
 
             st.divider()
 
-            for i,item in enumerate(data["categories"][cat]):
+            for i,item in enumerate(list(data["categories"][cat])):
 
                 c1,c2 = st.columns([5,1])
 
                 c1.write(item["en"]+" - "+item["ar"])
 
-                if c2.button("حذف",key=i):
+                if c2.button("حذف",key=f"del_{cat}_{i}"):
+
                     data["categories"][cat].pop(i)
                     save_data(data)
                     st.rerun()
@@ -247,4 +260,5 @@ else:
             st.divider()
 
     else:
+
         st.info("لا توجد وحدات دراسية بعد. استخدم لوحة الإدارة.")
