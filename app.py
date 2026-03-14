@@ -171,10 +171,27 @@ DB_FILE = "data.json"
 AUDIO_DIR = "audio_cache"
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
+# حذف ملفات الصوت القديمة (Guy/Ava/Sonia) تلقائياً عند كل تشغيل
+# الملفات الجديدة ستُولَّد بالأصوات الرسمية الجديدة
+_OLD_VOICE_IDS = ["GuyNeural", "AvaNeural", "SoniaNeural"]
+_CURRENT_VOICES = ["AndrewMultilingual", "EmmaMultilingual", "RyanNeural"]
+
+def _is_old_audio(fname):
+    # الملفات القديمة hash مختلف تلقائياً لان voice_id تغير
+    # نحذف كل الملفات القديمة مرة واحدة فقط عند اول تشغيل بعد التحديث
+    return fname.endswith(".mp3")
+
+if not os.path.exists(os.path.join(AUDIO_DIR, ".voices_updated_v2")):
+    for _f in os.listdir(AUDIO_DIR):
+        if _f.endswith(".mp3"):
+            try: os.remove(os.path.join(AUDIO_DIR, _f))
+            except: pass
+    open(os.path.join(AUDIO_DIR, ".voices_updated_v2"), "w").close()
+
 VOICES = {
-    "🎙️ صوت رجالي واضح (Guy)":    "en-US-GuyNeural",
-    "🎙️ صوت نسائي رقيق (Ava)":    "en-US-AvaNeural",
-    "🎙️ صوت بريطاني فخم (Sonia)": "en-GB-SoniaNeural",
+    "🎓 صوت رجالي رسمي واضح (Andrew)":  "en-US-AndrewMultilingualNeural",
+    "🎓 صوت نسائي رسمي واضح (Emma)":    "en-US-EmmaMultilingualNeural",
+    "🎓 صوت بريطاني اكاديمي (Ryan)":     "en-GB-RyanNeural",
 }
 
 
