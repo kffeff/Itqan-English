@@ -131,6 +131,42 @@ st.markdown("""
     ul[data-baseweb="menu"] li:hover {
         background-color: #2563eb !important;
     }
+    /* ---- Popover (اعدادات الصوت): خلفية فاتحة => نص اسود واضح ---- */
+    div[data-testid="stPopoverBody"] {
+        background-color: #ffffff !important;
+    }
+    div[data-testid="stPopoverBody"] label,
+    div[data-testid="stPopoverBody"] p,
+    div[data-testid="stPopoverBody"] h3,
+    div[data-testid="stPopoverBody"] span,
+    div[data-testid="stPopoverBody"] .stMarkdown p,
+    div[data-testid="stPopoverBody"] div[data-testid="stText"] {
+        color: #000000 !important;
+    }
+    /* حقول الادخال داخل الـ Popover: خلفية فاتحة ونص اسود */
+    div[data-testid="stPopoverBody"] input,
+    div[data-testid="stPopoverBody"] textarea {
+        background-color: #f0f4ff !important;
+        color: #000000 !important;
+        border: 2px solid #2563eb !important;
+    }
+    div[data-testid="stPopoverBody"] input::placeholder {
+        color: #64748b !important;
+    }
+    /* Selectbox داخل الـ Popover */
+    div[data-testid="stPopoverBody"] div[data-baseweb="select"] > div {
+        background-color: #f0f4ff !important;
+        border: 2px solid #2563eb !important;
+    }
+    div[data-testid="stPopoverBody"] div[data-baseweb="select"] span,
+    div[data-testid="stPopoverBody"] div[data-baseweb="select"] div {
+        color: #000000 !important;
+    }
+    /* Slider label داخل الـ Popover */
+    div[data-testid="stPopoverBody"] .stSlider label,
+    div[data-testid="stPopoverBody"] .stSlider span {
+        color: #000000 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
