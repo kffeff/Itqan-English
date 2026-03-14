@@ -131,41 +131,36 @@ st.markdown("""
     ul[data-baseweb="menu"] li:hover {
         background-color: #2563eb !important;
     }
-    /* ---- Popover (اعدادات الصوت): خلفية فاتحة => نص اسود واضح ---- */
-    div[data-testid="stPopoverBody"] {
-        background-color: #ffffff !important;
-    }
+    /* ---- Popover (اعدادات الصوت): نصوص وحقول بيضاء على خلفية داكنة ---- */
     div[data-testid="stPopoverBody"] label,
     div[data-testid="stPopoverBody"] p,
     div[data-testid="stPopoverBody"] h3,
-    div[data-testid="stPopoverBody"] span,
     div[data-testid="stPopoverBody"] .stMarkdown p,
-    div[data-testid="stPopoverBody"] div[data-testid="stText"] {
-        color: #000000 !important;
+    div[data-testid="stPopoverBody"] div[data-testid="stText"],
+    div[data-testid="stPopoverBody"] .stSlider label,
+    div[data-testid="stPopoverBody"] .stSlider span,
+    div[data-testid="stPopoverBody"] .stSlider div[data-testid="stTickBar"] {
+        color: #ffffff !important;
     }
-    /* حقول الادخال داخل الـ Popover: خلفية فاتحة ونص اسود */
-    div[data-testid="stPopoverBody"] input,
-    div[data-testid="stPopoverBody"] textarea {
-        background-color: #f0f4ff !important;
-        color: #000000 !important;
+    /* حقل البحث داخل الـ Popover */
+    div[data-testid="stPopoverBody"] input {
+        background-color: #334155 !important;
+        color: #ffffff !important;
         border: 2px solid #2563eb !important;
+        border-radius: 10px !important;
     }
     div[data-testid="stPopoverBody"] input::placeholder {
-        color: #64748b !important;
+        color: #94a3b8 !important;
     }
     /* Selectbox داخل الـ Popover */
     div[data-testid="stPopoverBody"] div[data-baseweb="select"] > div {
-        background-color: #f0f4ff !important;
+        background-color: #334155 !important;
         border: 2px solid #2563eb !important;
+        border-radius: 10px !important;
     }
     div[data-testid="stPopoverBody"] div[data-baseweb="select"] span,
     div[data-testid="stPopoverBody"] div[data-baseweb="select"] div {
-        color: #000000 !important;
-    }
-    /* Slider label داخل الـ Popover */
-    div[data-testid="stPopoverBody"] .stSlider label,
-    div[data-testid="stPopoverBody"] .stSlider span {
-        color: #000000 !important;
+        color: #ffffff !important;
     }
     </style>
 """, unsafe_allow_html=True)
