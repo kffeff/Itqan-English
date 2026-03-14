@@ -170,18 +170,45 @@ def generate_voice(text: str, filename: str, voice_id: str, rate: str) -> None:
 
 def get_audio_html(file_path: str, audio_id: str) -> str:
     """
-    تشفير الصوت بـ Base64 وحقنه مباشرةً في وسم <audio>.
-    - يعمل على Safari / iPhone بدون أي مشكلة.
-    - استخدام audio_id فريد يجبر المتصفح على إعادة التحميل فوراً عند تغيير الصوت.
+    الحل النهائي لمشكلة Safari/iPhone:
+    ─────────────────────────────────────
+    Safari يُخزّن عنصر <audio> في الـ cache ويتجاهل تغيير الـ src.
+    الحل: نضع الـ Base64 كاملاً في متغير JS، ثم نحذف العنصر القديم
+    ونُنشئ عنصراً جديداً تماماً من الصفر في كل مرة.
+    هذا يجبر Safari على التعامل مع الصوت كمورد جديد كلياً.
     """
     with open(file_path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode()
-    return (
-        f'<audio id="au_{audio_id}" controls preload="auto" style="width:100%;height:50px;'
-        f'margin-top:18px;border-radius:12px;">'
-        f'<source src="data:audio/mpeg;base64,{b64}" type="audio/mpeg">'
-        f'</audio>'
-    )
+
+    return f"""
+<div id="wrapper_{audio_id}" style="margin-top:18px;"></div>
+<script>
+(function() {{
+    var wrapper = document.getElementById('wrapper_{audio_id}');
+    if (!wrapper) return;
+
+    // احذف أي عنصر audio قديم داخل هذا الـ wrapper
+    wrapper.innerHTML = '';
+
+    // أنشئ عنصر audio جديداً من الصفر
+    var audio = document.createElement('audio');
+    audio.controls = true;
+    audio.preload  = 'auto';
+    audio.style.cssText = 'width:100%;height:50px;border-radius:12px;display:block;';
+
+    var source = document.createElement('source');
+    source.type = 'audio/mpeg';
+    source.src  = 'data:audio/mpeg;base64,{b64}';
+
+    audio.appendChild(source);
+
+    // load() يجبر Safari على قراءة الـ src الجديد وتجاهل الـ cache
+    audio.load();
+
+    wrapper.appendChild(audio);
+}})();
+</script>
+"""
 
 
 # ─────────────────────────────────────────────
