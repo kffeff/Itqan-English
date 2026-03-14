@@ -1,3 +1,6 @@
+سكربت كامل نهائي. استبدل به ملف `app.py`. يحقق: نطق الكلمة الإنجليزية فقط، سرعة افتراضية بطيئة (-30%)، تبديل الصوت يعمل فوراً عبر Hash، توليد الصوت لكل (كلمة+صوت+سرعة)، حقن Base64 داخل `<audio>` ليعمل على Safari في الآيفون، أيقونة إعدادات Popover، لوحة إدارة عبر `?admin=true`.
+
+```python
 import streamlit as st
 import os
 import json
@@ -6,28 +9,24 @@ import hashlib
 import base64
 import edge_tts
 
-# ===============================
-# إعدادات التطبيق
-# ===============================
-
+# =========================
+# إعدادات أساسية
+# =========================
 st.set_page_config(page_title="منصة إتقان اللغة الإنجليزية", layout="wide")
 
 DB_FILE = "data.json"
 AUDIO_DIR = "audio_cache"
-
-if not os.path.exists(AUDIO_DIR):
-    os.makedirs(AUDIO_DIR)
+os.makedirs(AUDIO_DIR, exist_ok=True)
 
 VOICES = {
-    "صوت رجالي واضح": "en-US-GuyNeural",
-    "صوت نسائي واضح": "en-US-AvaNeural",
-    "صوت بريطاني": "en-GB-SoniaNeural"
+    "🎙️ صوت رجالي واضح": "en-US-GuyNeural",
+    "🎙️ صوت نسائي واضح": "en-US-AvaNeural",
+    "🎙️ صوت بريطاني": "en-GB-SoniaNeural"
 }
 
-# ===============================
-# التصميم
-# ===============================
-
+# =========================
+# تصميم الواجهة
+# =========================
 st.markdown("""
 <style>
 
@@ -53,6 +52,7 @@ color:#1e293b;
 font-size:26px;
 color:#059669;
 font-weight:700;
+margin-top:5px;
 }
 
 .pron{
@@ -74,10 +74,9 @@ margin-top:20px;
 </style>
 """, unsafe_allow_html=True)
 
-# ===============================
-# تحميل البيانات
-# ===============================
-
+# =========================
+# قاعدة البيانات
+# =========================
 def load_data():
     if os.path.exists(DB_FILE):
         with open(DB_FILE,"r",encoding="utf-8") as f:
@@ -90,11 +89,10 @@ def save_data(data):
 
 data = load_data()
 
-# ===============================
+# =========================
 # توليد الصوت
-# ===============================
-
-async def generate_voice(text, voice, speed, path):
+# =========================
+async def tts_generate(text, voice, speed, path):
     communicate = edge_tts.Communicate(
         text=text,
         voice=voice,
@@ -102,56 +100,62 @@ async def generate_voice(text, voice, speed, path):
     )
     await communicate.save(path)
 
-def create_audio(text, voice, speed):
+def generate_audio(text, voice, speed):
 
-    unique = text + voice + str(speed)
-    file_hash = hashlib.md5(unique.encode()).hexdigest()
+    unique_string = f"{text}_{voice}_{speed}"
+    file_hash = hashlib.md5(unique_string.encode()).hexdigest()
 
     filename = f"{file_hash}.mp3"
     path = os.path.join(AUDIO_DIR, filename)
 
     if not os.path.exists(path):
-        asyncio.run(generate_voice(text, voice, speed, path))
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        loop.run_until_complete(
+            tts_generate(text, voice, speed, path)
+        )
+
+        loop.close()
 
     with open(path,"rb") as f:
         b64 = base64.b64encode(f.read()).decode()
 
-    audio_id = hashlib.md5((file_hash+"id").encode()).hexdigest()
+    audio_id = hashlib.md5((file_hash+"audio").encode()).hexdigest()
 
-    return f"""
+    html = f"""
     <audio id="{audio_id}" controls>
-    <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
+        <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
     </audio>
     """
 
-# ===============================
-# الإعدادات
-# ===============================
+    return html
 
+# =========================
+# إعدادات المستخدم
+# =========================
 with st.popover("⚙️"):
-    voice_name = st.selectbox("الصوت", list(VOICES.keys()))
+    voice_name = st.selectbox("اختر الصوت", list(VOICES.keys()))
     speed = st.slider("سرعة النطق", -50, 0, -30)
     search = st.text_input("بحث")
 
 voice_id = VOICES[voice_name]
 
-# ===============================
+# =========================
 # العنوان
-# ===============================
-
+# =========================
 st.markdown("<h1 style='text-align:center;color:#007bff'>منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
 
-# ===============================
-# وضع الإدارة
-# ===============================
-
+# =========================
+# تحديد وضع الإدارة
+# =========================
 params = st.query_params
 is_admin = str(params.get("admin","false")).lower() == "true"
 
-# ===============================
+# =========================
 # لوحة الإدارة
-# ===============================
-
+# =========================
 if is_admin:
 
     st.title("لوحة الإدارة")
@@ -160,9 +164,9 @@ if is_admin:
 
     with tab1:
 
-        new_cat = st.text_input("قسم جديد")
+        new_cat = st.text_input("اسم القسم")
 
-        if st.button("إضافة القسم"):
+        if st.button("إضافة قسم"):
             if new_cat:
                 data["categories"][new_cat] = []
                 save_data(data)
@@ -170,7 +174,7 @@ if is_admin:
 
         if data["categories"]:
 
-            target = st.selectbox("اختر القسم", list(data["categories"].keys()))
+            target = st.selectbox("القسم", list(data["categories"].keys()))
 
             raw = st.text_area("جملة | ترجمة | نطق")
 
@@ -180,7 +184,7 @@ if is_admin:
 
                     parts = [x.strip() for x in line.split("|")]
 
-                    if len(parts)==3:
+                    if len(parts) == 3:
 
                         data["categories"][target].append({
                             "en":parts[0],
@@ -195,7 +199,7 @@ if is_admin:
 
         if data["categories"]:
 
-            cat = st.selectbox("القسم", list(data["categories"].keys()))
+            cat = st.selectbox("اختر القسم", list(data["categories"].keys()))
 
             if st.button("حذف القسم"):
                 del data["categories"][cat]
@@ -215,15 +219,14 @@ if is_admin:
                     save_data(data)
                     st.rerun()
 
-# ===============================
+# =========================
 # واجهة الطالب
-# ===============================
-
+# =========================
 else:
 
     if data["categories"]:
 
-        cat = st.selectbox("الوحدة", list(data["categories"].keys()))
+        cat = st.selectbox("الوحدة الدراسية", list(data["categories"].keys()))
 
         items = data["categories"][cat]
 
@@ -240,11 +243,12 @@ else:
             </div>
             """, unsafe_allow_html=True)
 
-            audio_html = create_audio(item["en"], voice_id, speed)
+            audio_html = generate_audio(item["en"], voice_id, speed)
 
             st.markdown(audio_html, unsafe_allow_html=True)
 
             st.divider()
 
     else:
-        st.info("لا توجد دروس بعد")
+        st.info("لا توجد وحدات دراسية بعد. استخدم لوحة الإدارة.")
+```
