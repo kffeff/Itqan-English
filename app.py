@@ -160,8 +160,8 @@ data = load_data()
 categories = list(data.get("categories", {}).keys())
 
 # ====== التحقق من كون المستخدم أدمن عبر باراميتر الرابط ======
-params = st.experimental_get_query_params()
-is_admin = params.get("admin", ["false"])[0].lower() == "true"
+params = st.query_params
+is_admin = str(params.get("admin", "false")).lower() == "true"
 
 # ====== زر الإعدادات العائم + لوحة الإعدادات (باستخدام popover إن توفر، وإلا fallback) ======
 
