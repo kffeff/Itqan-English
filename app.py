@@ -35,10 +35,21 @@ st.markdown("""
     .ar-text { font-size: 26px; color: #059669; font-weight: 700; margin-bottom: 4px; font-family: 'Cairo', sans-serif; }
     .pron-box {
         background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
-        padding: 18px 24px; border-radius: 16px; border: 3px dashed #f43f5e;
-        color: #e11d48; font-size: 46px; font-weight: 900; margin-top: 18px;
-        display: block; width: 100%; line-height: 1.3;
-        font-family: 'Cairo', sans-serif; letter-spacing: 1px;
+        padding: 14px 18px; border-radius: 16px; border: 3px dashed #f43f5e;
+        color: #e11d48;
+        font-size: clamp(22px, 5vw, 46px);
+        font-weight: 900; margin-top: 14px;
+        display: block; width: 100%; line-height: 1.4;
+        font-family: 'Cairo', sans-serif; letter-spacing: 0.5px;
+        word-break: break-word; overflow-wrap: break-word;
+        white-space: normal;
+    }
+    @media (max-width: 600px) {
+        .pron-box { font-size: clamp(18px, 4.5vw, 28px) !important; padding: 10px 12px; }
+        .en-text  { font-size: clamp(22px, 6vw, 32px) !important; }
+        .ar-text  { font-size: clamp(16px, 4vw, 22px) !important; }
+        .card     { padding: 20px 16px 16px !important; }
+        .quiz-en  { font-size: clamp(22px, 6vw, 36px) !important; }
     }
 
     /* --- وضع الاختبار --- */
