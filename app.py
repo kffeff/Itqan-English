@@ -13,7 +13,7 @@ st.set_page_config(page_title="منصة إتقان اللغة الإنجليزي
 
 DB_FILE = "data.json"
 AUDIO_DIR = "audio_cache"
-os.makedirs(AUDIO_DIR, exist_ok=True)
+os.makedirs("audio_cache", exist_ok=True)
 
 VOICES = {
     "🎙️ صوت رجالي واضح": "en-US-GuyNeural",
