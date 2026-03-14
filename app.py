@@ -1,312 +1,250 @@
 import streamlit as st
-import json
 import os
+import json
 import asyncio
-import edge_tts
-import base64
 import hashlib
-from typing import Dict, Any
+import base64
+import edge_tts
 
-# ====== إعدادات ملف المشروع ======
-DB_FILE = os.path.join(os.getcwd(), "data.json")
-AUDIO_DIR = os.path.join(os.getcwd(), "audio_cache")
-os.makedirs(AUDIO_DIR, exist_ok=True)
+# ===============================
+# إعدادات التطبيق
+# ===============================
 
-VOICES = {
-    "🎙️ صوت رجالي واضح (Guy)": "en-US-GuyNeural",
-    "🎙️ صوت نسائي رقيق (Ava)": "en-US-AvaNeural",
-    "🎙️ صوت بريطاني فخم (Sonia)": "en-GB-SoniaNeural",
-}
-
-# ====== واجهة الصفحة والـ CSS ======
 st.set_page_config(page_title="منصة إتقان اللغة الإنجليزية", layout="wide")
 
-st.markdown(
-    """
-    <style>
-    #MainMenu, footer, header, .stDeployButton {visibility: hidden;}
-    .stApp { background-color: #fcfdfe; }
+DB_FILE = "data.json"
+AUDIO_DIR = "audio_cache"
 
-    /* تصميم البطاقة */
-    .card {
-        background: white;
-        padding: 30px;
-        border-radius: 25px;
-        border-right: 15px solid #007bff;
-        margin-bottom: 25px;
-        box-shadow: 0 15px 40px rgba(0,0,0,0.06);
-        text-align: center;
-        width: 100%;
-    }
+if not os.path.exists(AUDIO_DIR):
+    os.makedirs(AUDIO_DIR)
 
-    .en-text { font-size: 38px; font-weight: 900; color: #1e293b; margin-bottom: 5px; }
-    .ar-text { font-size: 26px; color: #10b981; font-weight: 700; }
+VOICES = {
+    "صوت رجالي واضح": "en-US-GuyNeural",
+    "صوت نسائي واضح": "en-US-AvaNeural",
+    "صوت بريطاني": "en-GB-SoniaNeural"
+}
 
-    /* سطر النطق: كبير جداً وواضح */
-    .pron-box {
-        background-color: #fff1f2;
-        padding: 20px;
-        border-radius: 18px;
-        border: 3px dashed #f43f5e;
-        color: #e11d48;
-        font-size: 45px; 
-        font-weight: 900;
-        margin-top: 20px;
-        display: block;
-        width: 100%;
-        line-height: 1.2;
-    }
+# ===============================
+# التصميم
+# ===============================
 
-    /* زر الإعدادات العائم */
-    .float-settings {
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        z-index: 1000;
-    }
+st.markdown("""
+<style>
 
-    .float-settings button{
-        border-radius: 50% !important;
-        width: 65px !important;
-        height: 65px !important;
-        background-color: #007bff !important;
-        color: white !important;
-        border: none !important;
-        box-shadow: 0 4px 20px rgba(0,123,255,0.5) !important;
-        font-size: 22px;
-    }
+#MainMenu, footer, header {visibility:hidden;}
 
-    audio { width: 100%; height: 50px; margin-top: 20px; border-radius: 10px; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+.card{
+background:white;
+padding:30px;
+border-radius:25px;
+border-right:12px solid #007bff;
+margin-bottom:25px;
+box-shadow:0 10px 30px rgba(0,0,0,0.07);
+text-align:center;
+}
 
-# ====== إدارة البيانات ======
+.en{
+font-size:40px;
+font-weight:900;
+color:#1e293b;
+}
 
-def load_data() -> Dict[str, Any]:
+.ar{
+font-size:26px;
+color:#059669;
+font-weight:700;
+}
+
+.pron{
+margin-top:20px;
+font-size:45px;
+font-weight:900;
+color:#e11d48;
+background:#fff1f2;
+padding:18px;
+border-radius:16px;
+border:3px dashed #f43f5e;
+}
+
+audio{
+width:100%;
+margin-top:20px;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ===============================
+# تحميل البيانات
+# ===============================
+
+def load_data():
     if os.path.exists(DB_FILE):
-        with open(DB_FILE, "r", encoding="utf-8") as f:
-            try:
-                return json.load(f)
-            except Exception:
-                return {"categories": {}, "favorites": []}
-    return {"categories": {}, "favorites": []}
+        with open(DB_FILE,"r",encoding="utf-8") as f:
+            return json.load(f)
+    return {"categories":{}}
 
+def save_data(data):
+    with open(DB_FILE,"w",encoding="utf-8") as f:
+        json.dump(data,f,ensure_ascii=False,indent=4)
 
-def save_data(data: Dict[str, Any]):
-    with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-
-
-# ====== الصوت (توليد وحفظ) ======
-async def _generate_voice_async(ssml: str, output_path: str, voice: str):
-    communicate = edge_tts.Communicate(ssml, voice)
-    await communicate.save(output_path)
-
-
-def run_async(coro):
-    try:
-        return asyncio.run(coro)
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        return loop.run_until_complete(coro)
-
-
-def generate_voice(text: str, out_filename: str, voice_id: str, rate_percent: int) -> bool:
-    """
-    يولّد صوتاً للكلمة الإنجليزية فقط بسرعة بطيئة وواضحة.
-    يستخدم معامل rate الخاص بـ edge-tts لضمان وضوح النطق.
-    """
-    out_path = os.path.join(AUDIO_DIR, out_filename)
-
-    try:
-        communicate = edge_tts.Communicate(
-            text=text,                 # الكلمة الإنجليزية فقط
-            voice=voice_id,            # الصوت المختار (رجالي / نسائي / بريطاني)
-            rate=f"{rate_percent}%"   # إبطاء النطق
-        )
-
-        run_async(communicate.save(out_path))
-        return True
-
-    except Exception as e:
-        st.error(f"خطأ في توليد الصوت: {e}")
-        return False
-
-
-def get_audio_html(file_path: str, audio_id: str) -> str:
-    """تشفير الملف بصيغة base64 وادراجه داخل وسم <audio> ليعمل على سفاري الآيفون."""
-    if not os.path.exists(file_path):
-        return ""
-    with open(file_path, "rb") as f:
-        data = f.read()
-        b64 = base64.b64encode(data).decode()
-        return f'<audio id="{audio_id}" controls preload="auto"><source src="data:audio/mpeg;base64,{b64}" type="audio/mpeg"></audio>'
-
-
-# ====== تهيئة الحالة الجلسية ======
-if "settings_open" not in st.session_state:
-    st.session_state.settings_open = False
-
-if "selected_voice_key" not in st.session_state:
-    st.session_state.selected_voice_key = list(VOICES.keys())[0]
-
-if "selected_speed" not in st.session_state:
-    st.session_state.selected_speed = -30  # قيمة افتراضية بطيئة وواضحة
-
-if "search_q" not in st.session_state:
-    st.session_state.search_q = ""
-
-# ====== تحميل البيانات ======
 data = load_data()
-categories = list(data.get("categories", {}).keys())
 
-# ====== التحقق من كون المستخدم أدمن عبر باراميتر الرابط ======
-params = st.query_params
-is_admin = str(params.get("admin", "false")).lower() == "true"
+# ===============================
+# توليد الصوت
+# ===============================
 
-# ====== زر الإعدادات العائم + لوحة الإعدادات (باستخدام popover إن توفر، وإلا fallback) ======
-
-# حاول استخدام st.popover إن كانت متاحة
-settings_container = None
-if hasattr(st, "popover"):
-    try:
-        settings_container = st.popover("⚙️")
-    except Exception:
-        settings_container = None
-
-if settings_container is not None:
-    with settings_container:
-        st.markdown("### 🛠 إعدادات النطق")
-        st.selectbox("اختر المعلم:", list(VOICES.keys()), key="selected_voice_key")
-        st.slider("سرعة النطق:", -50, 0, st.session_state.selected_speed, step=5, key="selected_speed")
-        st.divider()
-        st.text_input("🔍 بحث سريع:", key="search_q")
-else:
-    # Fallback: زر عائم يفتح/يغلق صندوق الإعدادات في أسفل الشاشة
-    st.markdown(
-        "<div class='float-settings'><button id='settings-btn'>⚙️</button></div>",
-        unsafe_allow_html=True,
+async def generate_voice(text, voice, speed, path):
+    communicate = edge_tts.Communicate(
+        text=text,
+        voice=voice,
+        rate=f"{speed}%"
     )
-    # الزر العائم لا يرسل حدث مباشرة؛ نعرض كتلة إعدادات قابلة للتوسيع
-    with st.expander("⚙️ إعدادات النطق"):
-        st.selectbox("اختر المعلم:", list(VOICES.keys()), key="selected_voice_key")
-        st.slider("سرعة النطق:", -50, 0, st.session_state.selected_speed, step=5, key="selected_speed")
-        st.divider()
-        st.text_input("🔍 بحث سريع:", key="search_q")
+    await communicate.save(path)
 
-# ====== عنوان المنصة ======
-st.markdown("<h1 style='text-align: center; color: #007bff; font-family: Cairo;'>منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
+def create_audio(text, voice, speed):
 
-# ====== واجهة الإدارة ======
+    unique = text + voice + str(speed)
+    file_hash = hashlib.md5(unique.encode()).hexdigest()
+
+    filename = f"{file_hash}.mp3"
+    path = os.path.join(AUDIO_DIR, filename)
+
+    if not os.path.exists(path):
+        asyncio.run(generate_voice(text, voice, speed, path))
+
+    with open(path,"rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
+
+    audio_id = hashlib.md5((file_hash+"id").encode()).hexdigest()
+
+    return f"""
+    <audio id="{audio_id}" controls>
+    <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
+    </audio>
+    """
+
+# ===============================
+# الإعدادات
+# ===============================
+
+with st.popover("⚙️"):
+    voice_name = st.selectbox("الصوت", list(VOICES.keys()))
+    speed = st.slider("سرعة النطق", -50, 0, -30)
+    search = st.text_input("بحث")
+
+voice_id = VOICES[voice_name]
+
+# ===============================
+# العنوان
+# ===============================
+
+st.markdown("<h1 style='text-align:center;color:#007bff'>منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
+
+# ===============================
+# وضع الإدارة
+# ===============================
+
+params = st.query_params
+is_admin = str(params.get("admin","false")).lower() == "true"
+
+# ===============================
+# لوحة الإدارة
+# ===============================
+
 if is_admin:
-    st.title("🛠 لوحة الإدارة الكاملة")
-    tab1, tab2 = st.tabs(["➕ إضافة محتوى", "🗑 إدارة وحذف"])
+
+    st.title("لوحة الإدارة")
+
+    tab1,tab2 = st.tabs(["إضافة محتوى","إدارة"])
 
     with tab1:
-        new_c = st.text_input("اسم القسم الجديد:")
-        if st.button("حفظ القسم الجديد"):
-            new_c = new_c.strip()
-            if new_c:
-                if new_c in data["categories"]:
-                    st.warning("القسم موجود بالفعل.")
-                else:
-                    data["categories"][new_c] = []
-                    save_data(data)
-                    st.success("تم إنشاء القسم.")
-                    st.experimental_rerun()
-            else:
-                st.error("الرجاء إدخال اسم قسم صالح.")
 
-        if categories:
-            st.divider()
-            target = st.selectbox("إضافة إلى قسم:", categories)
-            raw = st.text_area("جملة | ترجمة | نطق (سطر جديد لكل جملة)")
-            if st.button("🚀 حفظ الجمل"):
-                added = 0
-                for line in raw.strip().split('\n'):
-                    parts = [p.strip() for p in line.split("|")]
-                    if len(parts) == 3 and parts[0]:
-                        data["categories"][target].append({"en": parts[0], "ar": parts[1], "pron": parts[2]})
-                        added += 1
-                if added:
-                    save_data(data)
-                    st.success(f"تم حفظ {added} جملة.")
-                    st.experimental_rerun()
-                else:
-                    st.error("تأكد من تنسيق المدخلات (جملة | ترجمة | نطق).")
+        new_cat = st.text_input("قسم جديد")
+
+        if st.button("إضافة القسم"):
+            if new_cat:
+                data["categories"][new_cat] = []
+                save_data(data)
+                st.rerun()
+
+        if data["categories"]:
+
+            target = st.selectbox("اختر القسم", list(data["categories"].keys()))
+
+            raw = st.text_area("جملة | ترجمة | نطق")
+
+            if st.button("حفظ الجمل"):
+
+                for line in raw.split("\n"):
+
+                    parts = [x.strip() for x in line.split("|")]
+
+                    if len(parts)==3:
+
+                        data["categories"][target].append({
+                            "en":parts[0],
+                            "ar":parts[1],
+                            "pron":parts[2]
+                        })
+
+                save_data(data)
+                st.rerun()
 
     with tab2:
-        if categories:
-            cat_to_del = st.selectbox("اختر قسماً لحذفه:", categories)
-            if st.button("🔥 حذف القسم المختار نهائياً"):
-                del data["categories"][cat_to_del]
+
+        if data["categories"]:
+
+            cat = st.selectbox("القسم", list(data["categories"].keys()))
+
+            if st.button("حذف القسم"):
+                del data["categories"][cat]
                 save_data(data)
-                st.success("تم حذف القسم.")
-                st.experimental_rerun()
+                st.rerun()
 
             st.divider()
-            st.warning("لحذف جملة معينة، اختر القسم أولاً:")
-            cat_manage = st.selectbox("إدارة جمل القسم:", categories, key="manage_cat")
-            # عرض كل جملة مع زر حذف
-            for i, item in enumerate(list(data["categories"][cat_manage])):
-                cols = st.columns([4, 1])
-                cols[0].write(f"**{item['en']}**  —  {item['ar']}")
-                if cols[1].button("حذف", key=f"del_{cat_manage}_{i}"):
-                    data["categories"][cat_manage].pop(i)
+
+            for i,item in enumerate(data["categories"][cat]):
+
+                c1,c2 = st.columns([5,1])
+
+                c1.write(item["en"]+" - "+item["ar"])
+
+                if c2.button("حذف",key=i):
+                    data["categories"][cat].pop(i)
                     save_data(data)
-                    st.success("تم حذف الجملة.")
-                    st.experimental_rerun()
-        else:
-            st.info("لا توجد أقسام. أضف أقساماً من التبويب السابق.")
+                    st.rerun()
 
-# ====== واجهة الطالب ======
+# ===============================
+# واجهة الطالب
+# ===============================
+
 else:
-    if categories:
-        choice = st.selectbox("📂 اختر الوحدة الدراسية:", categories)
-        items = data["categories"].get(choice, [])
 
-        # تطبيق خيار البحث من الإعدادات
-        q = st.session_state.get("search_q", "") or ""
-        if q:
-            items = [it for it in items if q.lower() in it.get('en', '').lower()]
+    if data["categories"]:
 
-        # إعدادات الصوت الحالية
-        selected_voice_key = st.session_state.get("selected_voice_key", list(VOICES.keys())[0])
-        selected_speed = st.session_state.get("selected_speed", -30)
-        v_id = VOICES.get(selected_voice_key, list(VOICES.values())[0])
+        cat = st.selectbox("الوحدة", list(data["categories"].keys()))
+
+        items = data["categories"][cat]
+
+        if search:
+            items = [i for i in items if search.lower() in i["en"].lower()]
 
         for item in items:
-            # HTML البطاقة
+
             st.markdown(f"""
-            <div class="card">
-                <div class="en-text">{item['en']}</div>
-                <div class="ar-text">{item['ar']}</div>
-                <div class="pron-box">{item['pron']}</div>
+            <div class='card'>
+            <div class='en'>{item['en']}</div>
+            <div class='ar'>{item['ar']}</div>
+            <div class='pron'>{item['pron']}</div>
             </div>
             """, unsafe_allow_html=True)
 
-            # إنشاء قيمة Hash فريدة تعتمد على النص + الصوت + السرعة
-            unique_str = f"{item['en']}||{v_id}||{selected_speed}"
-            file_hash = hashlib.md5(unique_str.encode()).hexdigest()
-            f_name = f"audio_{file_hash}.mp3"
-            f_path = os.path.join(AUDIO_DIR, f_name)
+            audio_html = create_audio(item["en"], voice_id, speed)
 
-            # إذا لم يكن الملف موجوداً، نولده
-            if not os.path.exists(f_path):
-                ok = generate_voice(item['en'], f_name, v_id, selected_speed)
-                if not ok:
-                    st.warning("تعذر توليد الصوت حالياً. تأكد من اتصال السيرفر بالإنترنت.")
-
-            # عرض الصوت بتشفير Base64 مع audio_id فريد
-            audio_html = get_audio_html(f_path, file_hash)
-            if audio_html:
-                st.markdown(audio_html, unsafe_allow_html=True)
-            else:
-                st.info("لا يوجد ملف صوتي متاح.")
+            st.markdown(audio_html, unsafe_allow_html=True)
 
             st.divider()
+
     else:
-        st.info("مرحباً بك! يرجى إضافة أقسام من لوحة الإدارة أولاً.")
+        st.info("لا توجد دروس بعد")
