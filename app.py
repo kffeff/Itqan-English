@@ -74,14 +74,63 @@ st.markdown("""
         font-size: 18px; margin-bottom: 30px;
     }
     hr { border: none; border-top: 2px solid #e2e8f0; margin: 4px 0 20px; }
-    /* admin panel black text */
-    .stTabs [data-baseweb="tab"] { color: #000000 !important; font-weight: 700; }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] { color: #2563eb !important; }
-    .stTextInput label, .stTextArea label, .stSelectbox label, .stSlider label { color: #000000 !important; font-weight: 600; }
-    .stTextArea textarea, .stTextInput input { color: #000000 !important; }
-    h2, h3 { color: #000000 !important; }
-    p, div[data-testid="stText"] { color: #000000 !important; }
-    label { color: #000000 !important; }
+
+    /* ---- النصوص خارج الحقول: اسود (الخلفية فاتحة) ---- */
+    label,
+    .stTextInput label, .stTextArea label,
+    .stSelectbox label, .stSlider label,
+    .stTabs [data-baseweb="tab"],
+    h1, h2, h3, h4,
+    p, div[data-testid="stText"],
+    .stMarkdown p,
+    .stSelectbox span,
+    div[data-baseweb="select"] span,
+    .stAlert p,
+    .stInfo p {
+        color: #000000 !important;
+        font-weight: 600;
+    }
+
+    /* التبويب النشط يبقى ازرق */
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        color: #2563eb !important;
+    }
+
+    /* ---- النصوص داخل حقول الادخال: ابيض على خلفية داكنة ---- */
+    .stTextInput input,
+    .stTextArea textarea {
+        background-color: #1e293b !important;
+        color: #ffffff !important;
+        border: 2px solid #2563eb !important;
+        border-radius: 10px !important;
+        font-family: 'Cairo', sans-serif !important;
+    }
+    .stTextInput input::placeholder,
+    .stTextArea textarea::placeholder {
+        color: #94a3b8 !important;
+    }
+
+    /* ---- Selectbox: خلفية داكنة ونص ابيض ---- */
+    div[data-baseweb="select"] > div {
+        background-color: #1e293b !important;
+        border: 2px solid #2563eb !important;
+        border-radius: 10px !important;
+    }
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] div {
+        color: #ffffff !important;
+    }
+
+    /* ---- قائمة الخيارات المنسدلة ---- */
+    ul[data-baseweb="menu"] {
+        background-color: #1e293b !important;
+    }
+    ul[data-baseweb="menu"] li {
+        color: #ffffff !important;
+    }
+    ul[data-baseweb="menu"] li:hover {
+        background-color: #2563eb !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
