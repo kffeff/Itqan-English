@@ -29,14 +29,14 @@ st.markdown("""
     .en-text { font-size: 38px; font-weight: 900; color: #1e293b; margin-bottom: 5px; }
     .ar-text { font-size: 26px; color: #10b981; font-weight: 700; }
 
-    /* سطر النطق: كبير جداً وواضح (تعديل السطر الثالث) */
+    /* سطر النطق: كبير جداً وواضح كما طلبت */
     .pron-box {
         background-color: #fff1f2;
         padding: 20px;
         border-radius: 18px;
         border: 3px dashed #f43f5e;
         color: #e11d48;
-        font-size: 45px; /* تكبير إضافي بناءً على طلبك */
+        font-size: 45px; 
         font-weight: 900;
         margin-top: 20px;
         display: block;
@@ -44,7 +44,7 @@ st.markdown("""
         line-height: 1.2;
     }
 
-    /* أيقونة الإعدادات العائمة الاحترافية */
+    /* أيقونة الإعدادات العائمة الاحترافية (Popover) */
     div[data-testid="stPopover"] > button {
         border-radius: 50% !important;
         width: 65px !important;
@@ -57,7 +57,6 @@ st.markdown("""
         bottom: 30px;
         right: 30px;
         z-index: 1000;
-        font-size: 24px !important;
     }
 
     audio { width: 100%; height: 50px; margin-top: 20px; border-radius: 10px; }
@@ -84,61 +83,77 @@ def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f: json.dump(data, f, ensure_ascii=False, indent=4)
 
 async def generate_voice(text, filename, voice_id, rate):
-    # تم تثبيت السرعة لتكون بطيئة وواضحة جداً لعدم بلع الحروف
     communicate = edge_tts.Communicate(text, voice_id, rate=rate)
     await communicate.save(os.path.join(AUDIO_DIR, filename))
 
-def get_audio_html(file_path):
-    """حل مشكلة الآيفون عبر Base64 مع إضافة ID فريد لإجبار المتصفح على التحديث"""
+def get_audio_html(file_path, audio_id):
+    """تشفير الصوت ليعمل على الآيفون مع إجبار المتصفح على التحديث عند تغيير الصوت"""
     with open(file_path, "rb") as f:
         data = f.read()
         b64 = base64.b64encode(data).decode()
-        unique_id = hashlib.md5(data).hexdigest() # معرّف فريد للصوت
-        return f'<audio id="{unique_id}" controls preload="auto"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
+        # استخدام audio_id فريد يضمن تحديث الصوت فوراً عند الطالب
+        return f'<audio id="{audio_id}" controls preload="auto"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
 
 data = load_data()
 categories = list(data["categories"].keys())
 is_admin = st.query_params.get("admin") == "true"
 
-# --- 3. أيقونة الإعدادات العائمة (تظهر وتختفي) ---
-# تم وضعها في popover كما طلبت لتكون احترافية وتلقائية
+# --- 3. أيقونة الإعدادات العائمة (Popover) ---
 with st.popover("⚙️"):
-    st.markdown("### 🛠 إعدادات الصوت")
-    selected_voice_key = st.selectbox("اختر المعلم:", list(VOICES.keys()), key="voice_choice")
-    # السرعة الافتراضية -30% لضمان وضوح مخارج الحروف
-    selected_speed = st.slider("سرعة النطق:", -50, 0, -30, step=5, key="speed_choice")
+    st.markdown("### 🛠 إعدادات النطق")
+    selected_voice_key = st.selectbox("اختر المعلم:", list(VOICES.keys()), key="v_sel")
+    selected_speed = st.slider("سرعة النطق:", -50, 0, -25, step=5, key="s_sel")
     st.divider()
-    search_query = st.text_input("🔍 بحث عن جملة:", key="search_input")
+    search_q = st.text_input("🔍 بحث سريع:", key="search_q")
 
 # --- 4. واجهة المنصة ---
-st.markdown("<h1 style='text-align: center; color: #007bff; font-family: Cairo; margin-bottom:30px;'>منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #007bff; font-family: Cairo;'>منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
 
 if is_admin:
-    st.title("🛠 لوحة الإدارة")
-    new_cat = st.text_input("أضف قسماً جديداً:")
-    if st.button("حفظ القسم"):
-        data["categories"][new_cat] = []; save_data(data); st.rerun()
+    st.title("🛠 لوحة الإدارة الكاملة")
+    tab1, tab2 = st.tabs(["➕ إضافة محتوى", "🗑 إدارة وحذف"])
     
-    if categories:
-        target_cat = st.selectbox("إضافة جمل إلى:", categories)
-        input_data = st.text_area("أدخل (جملة | ترجمة | نطق)")
-        if st.button("🚀 حفظ الجمل"):
-            for line in input_data.strip().split('\n'):
-                parts = [p.strip() for p in line.split("|")]
-                if len(parts) == 3:
-                    data["categories"][target_cat].append({"en": parts[0], "ar": parts[1], "pron": parts[2]})
-            save_data(data); st.success("تم الحفظ بنجاح!"); st.rerun()
+    with tab1:
+        new_c = st.text_input("اسم القسم الجديد:")
+        if st.button("حفظ القسم الجديد"):
+            data["categories"][new_c] = []; save_data(data); st.rerun()
+        
+        if categories:
+            st.divider()
+            target = st.selectbox("إضافة إلى قسم:", categories)
+            raw = st.text_area("جملة | ترجمة | نطق (سطر جديد لكل جملة)")
+            if st.button("🚀 حفظ الجمل"):
+                for line in raw.strip().split('\n'):
+                    parts = [p.strip() for p in line.split("|")]
+                    if len(parts) == 3:
+                        data["categories"][target].append({"en": parts[0], "ar": parts[1], "pron": parts[2]})
+                save_data(data); st.success("تم الحفظ!"); st.rerun()
+
+    with tab2:
+        if categories:
+            cat_to_del = st.selectbox("اختر قسماً لحذفه:", categories)
+            if st.button("🔥 حذف القسم المختار نهائياً"):
+                del data["categories"][cat_to_del]; save_data(data); st.rerun()
+            
+            st.divider()
+            st.warning("لحذف جملة معينة، اختر القسم أولاً:")
+            cat_manage = st.selectbox("إدارة جمل القسم:", categories, key="manage_cat")
+            for i, item in enumerate(data["categories"][cat_manage]):
+                col1, col2 = st.columns([4, 1])
+                col1.write(f"{item['en']} - {item['ar']}")
+                if col2.button("حذف", key=f"del_{cat_manage}_{i}"):
+                    data["categories"][cat_manage].pop(i)
+                    save_data(data); st.rerun()
 
 else:
     if categories:
-        unit_choice = st.selectbox("📂 اختر الوحدة الدراسية:", categories)
-        items_to_show = data["categories"][unit_choice]
+        choice = st.selectbox("📂 اختر الوحدة الدراسية:", categories)
+        items = data["categories"][choice]
         
-        if search_query:
-            items_to_show = [i for i in items_to_show if search_query.lower() in i['en'].lower()]
+        if search_q:
+            items = [i for i in items if search_q.lower() in i['en'].lower()]
 
-        for item in items_to_show:
-            # عرض بطاقة الكلمة
+        for item in items:
             st.markdown(f"""
             <div class="card">
                 <div class="en-text">{item['en']}</div>
@@ -147,22 +162,19 @@ else:
             </div>
             """, unsafe_allow_html=True)
             
-            # --- منطق تغيير الصوت (الإصلاح الجذري) ---
-            voice_id = VOICES[selected_voice_key]
-            v_short_name = voice_id.split('-')[2]
+            # --- منطق الصوت المطور (يتغير فوراً) ---
+            v_id = VOICES[selected_voice_key]
+            # توليد Hash فريد يجمع (النص + الصوت + السرعة)
+            unique_str = f"{item['en']}_{v_id}_{selected_speed}"
+            file_hash = hashlib.md5(unique_str.encode()).hexdigest()
+            f_name = f"audio_{file_hash}.mp3"
+            f_path = os.path.join(AUDIO_DIR, f_name)
             
-            # إنشاء اسم ملف فريد يجمع بين (النص + نوع الصوت + السرعة)
-            # هذا يضمن أنه عند تغيير أي إعداد، يتغير اسم الملف فوراً
-            text_hash = hashlib.md5(f"{item['en']}_{v_short_name}_{selected_speed}".encode()).hexdigest()
-            filename = f"audio_{text_hash}.mp3"
-            filepath = os.path.join(AUDIO_DIR, filename)
+            if not os.path.exists(f_path):
+                asyncio.run(generate_voice(item['en'], f_name, v_id, f"{selected_speed}%"))
             
-            if not os.path.exists(filepath):
-                with st.spinner("جاري تبديل صوت المعلم..."):
-                    asyncio.run(generate_voice(item['en'], filename, voice_id, f"{selected_speed}%"))
-            
-            # عرض الصوت (سيعمل على الأيفون ويحدث فوراً عند تغيير الصوت)
-            st.markdown(get_audio_html(filepath), unsafe_allow_html=True)
+            # تمرير الـ file_hash كمعرف للـ audio لضمان التحديث في الآيفون
+            st.markdown(get_audio_html(f_path, file_hash), unsafe_allow_html=True)
             st.divider()
     else:
-        st.info("مرحباً بك! بانتظار رفع الدروس من قبل الإدارة.")
+        st.info("مرحباً بك! يرجى إضافة أقسام من لوحة الإدارة أولاً.")
