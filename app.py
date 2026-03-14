@@ -4,19 +4,17 @@ import os
 import asyncio
 import edge_tts
 import base64
+import hashlib
 
 # --- 1. إعدادات الصفحة والهوية البصرية ---
 st.set_page_config(page_title="منصة إتقان اللغة الإنجليزية", layout="wide")
 
-# كود CSS المطور لتحسين مظهر "أيقونة الإعدادات" وسطر النطق
 st.markdown("""
     <style>
-    /* إخفاء القوائم غير الضرورية */
     #MainMenu, footer, header, .stDeployButton {visibility: hidden;}
-    
     .stApp { background-color: #fcfdfe; }
 
-    /* تصميم البطاقة التعليمية */
+    /* تصميم البطاقة */
     .card {
         background: white;
         padding: 30px;
@@ -28,27 +26,17 @@ st.markdown("""
         width: 100%;
     }
 
-    .en-text { 
-        font-size: 38px; 
-        font-weight: 900; 
-        color: #1e293b; 
-        margin-bottom: 5px;
-    }
+    .en-text { font-size: 38px; font-weight: 900; color: #1e293b; margin-bottom: 5px; }
+    .ar-text { font-size: 26px; color: #10b981; font-weight: 700; }
 
-    .ar-text { 
-        font-size: 26px; 
-        color: #10b981; 
-        font-weight: 700; 
-    }
-
-    /* سطر النطق: تكبير الخط وتوضيحه بشكل فائق */
+    /* سطر النطق: كبير جداً وواضح (تعديل السطر الثالث) */
     .pron-box {
         background-color: #fff1f2;
         padding: 20px;
         border-radius: 18px;
         border: 3px dashed #f43f5e;
         color: #e11d48;
-        font-size: 42px; /* خط ضخم وواضح جداً */
+        font-size: 45px; /* تكبير إضافي بناءً على طلبك */
         font-weight: 900;
         margin-top: 20px;
         display: block;
@@ -56,37 +44,34 @@ st.markdown("""
         line-height: 1.2;
     }
 
-    /* تنسيق زر الإعدادات (البوب أوفر) ليظهر كأيقونة احترافية */
+    /* أيقونة الإعدادات العائمة الاحترافية */
     div[data-testid="stPopover"] > button {
         border-radius: 50% !important;
-        width: 60px !important;
-        height: 60px !important;
+        width: 65px !important;
+        height: 65px !important;
         background-color: #007bff !important;
         color: white !important;
         border: none !important;
-        box-shadow: 0 4px 15px rgba(0,123,255,0.4) !important;
+        box-shadow: 0 4px 20px rgba(0,123,255,0.5) !important;
         position: fixed;
         bottom: 30px;
         right: 30px;
         z-index: 1000;
+        font-size: 24px !important;
     }
 
-    audio {
-        width: 100%;
-        height: 50px;
-        margin-top: 20px;
-    }
+    audio { width: 100%; height: 50px; margin-top: 20px; border-radius: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. وظائف الصوت والبيانات ---
+# --- 2. إدارة البيانات والصوت ---
 DB_FILE = "data.json"
 AUDIO_DIR = "audio_cache"
 if not os.path.exists(AUDIO_DIR): os.makedirs(AUDIO_DIR)
 
 VOICES = {
     "🎙️ صوت رجالي واضح (Guy)": "en-US-GuyNeural",
-    "🎙️ صوت نسائي هادئ (Ava)": "en-US-AvaNeural",
+    "🎙️ صوت نسائي رقيق (Ava)": "en-US-AvaNeural",
     "🎙️ صوت بريطاني فخم (Sonia)": "en-GB-SoniaNeural"
 }
 
@@ -98,60 +83,62 @@ def load_data():
 def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f: json.dump(data, f, ensure_ascii=False, indent=4)
 
-async def generate_voice(text, filename, voice_key, rate):
-    # السرعة الآن مضبوطة لضمان الوضوح التام وعدم ضياع الحروف
-    communicate = edge_tts.Communicate(text, VOICES[voice_key], rate=rate)
+async def generate_voice(text, filename, voice_id, rate):
+    # تم تثبيت السرعة لتكون بطيئة وواضحة جداً لعدم بلع الحروف
+    communicate = edge_tts.Communicate(text, voice_id, rate=rate)
     await communicate.save(os.path.join(AUDIO_DIR, filename))
 
 def get_audio_html(file_path):
-    """تشفير الصوت ليعمل فوراً على الآيفون والمتصفحات الأخرى"""
+    """حل مشكلة الآيفون عبر Base64 مع إضافة ID فريد لإجبار المتصفح على التحديث"""
     with open(file_path, "rb") as f:
         data = f.read()
         b64 = base64.b64encode(data).decode()
-        return f'<audio controls preload="auto" style="border-radius:10px;"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
+        unique_id = hashlib.md5(data).hexdigest() # معرّف فريد للصوت
+        return f'<audio id="{unique_id}" controls preload="auto"><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
 
 data = load_data()
 categories = list(data["categories"].keys())
 is_admin = st.query_params.get("admin") == "true"
 
-# --- 3. أيقونة الإعدادات العائمة (التي تظهر وتختفي) ---
-# وضعت لك الإعدادات داخل Popover يظهر كأيقونة عائمة في أسفل الشاشة
+# --- 3. أيقونة الإعدادات العائمة (تظهر وتختفي) ---
+# تم وضعها في popover كما طلبت لتكون احترافية وتلقائية
 with st.popover("⚙️"):
-    st.markdown("### 🛠 إعدادات النطق")
-    u_voice = st.selectbox("اختر المعلم:", list(VOICES.keys()))
-    # ضبط السرعة لتبدأ من -30% لضمان نطق "رزين" وبطيء
-    u_speed = st.slider("سرعة الصوت:", -50, 0, -30, step=5)
+    st.markdown("### 🛠 إعدادات الصوت")
+    selected_voice_key = st.selectbox("اختر المعلم:", list(VOICES.keys()), key="voice_choice")
+    # السرعة الافتراضية -30% لضمان وضوح مخارج الحروف
+    selected_speed = st.slider("سرعة النطق:", -50, 0, -30, step=5, key="speed_choice")
     st.divider()
-    search_q = st.text_input("🔍 بحث سريع:")
+    search_query = st.text_input("🔍 بحث عن جملة:", key="search_input")
 
 # --- 4. واجهة المنصة ---
-st.markdown("<h1 style='text-align: center; color: #007bff; font-family: Cairo; margin-bottom:40px;'>منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #007bff; font-family: Cairo; margin-bottom:30px;'>منصة إتقان اللغة الإنجليزية</h1>", unsafe_allow_html=True)
 
 if is_admin:
     st.title("🛠 لوحة الإدارة")
-    new_c = st.text_input("اسم القسم:")
-    if st.button("إضافة القسم"):
-        data["categories"][new_c] = []; save_data(data); st.rerun()
+    new_cat = st.text_input("أضف قسماً جديداً:")
+    if st.button("حفظ القسم"):
+        data["categories"][new_cat] = []; save_data(data); st.rerun()
     
     if categories:
-        target = st.selectbox("إضافة إلى:", categories)
-        raw = st.text_area("جملة | ترجمة | نطق (سطر جديد لكل جملة)")
-        if st.button("حفظ"):
-            for line in raw.strip().split('\n'):
+        target_cat = st.selectbox("إضافة جمل إلى:", categories)
+        input_data = st.text_area("أدخل (جملة | ترجمة | نطق)")
+        if st.button("🚀 حفظ الجمل"):
+            for line in input_data.strip().split('\n'):
                 parts = [p.strip() for p in line.split("|")]
                 if len(parts) == 3:
-                    data["categories"][target].append({"en": parts[0], "ar": parts[1], "pron": parts[2]})
-            save_data(data); st.success("تم الحفظ!"); st.rerun()
+                    data["categories"][target_cat].append({"en": parts[0], "ar": parts[1], "pron": parts[2]})
+            save_data(data); st.success("تم الحفظ بنجاح!"); st.rerun()
+
 else:
     if categories:
-        choice = st.selectbox("📖 اختر الوحدة الدراسية:", categories)
-        items = data["categories"][choice]
+        unit_choice = st.selectbox("📂 اختر الوحدة الدراسية:", categories)
+        items_to_show = data["categories"][unit_choice]
         
-        if 'search_q' in locals() and search_q:
-            items = [i for i in items if search_q.lower() in i['en'].lower()]
+        if search_query:
+            items_to_show = [i for i in items_to_show if search_query.lower() in i['en'].lower()]
 
-        for idx, item in enumerate(items):
-            # البطاقة مع سطر النطق الضخم
+        for item in items_to_show:
+            # عرض بطاقة الكلمة
             st.markdown(f"""
             <div class="card">
                 <div class="en-text">{item['en']}</div>
@@ -160,18 +147,22 @@ else:
             </div>
             """, unsafe_allow_html=True)
             
-            # معالجة الصوت للأيفون
-            v_code = VOICES[u_voice].split('-')[2]
-            # اسم ملف فريد يعتمد على المحتوى والسرعة والصوت
-            safe_text = "".join(x for x in item['en'][:15] if x.isalnum())
-            f_name = f"{safe_text}_{v_code}_{u_speed}.mp3"
-            f_path = os.path.join(AUDIO_DIR, f_name)
+            # --- منطق تغيير الصوت (الإصلاح الجذري) ---
+            voice_id = VOICES[selected_voice_key]
+            v_short_name = voice_id.split('-')[2]
             
-            if not os.path.exists(f_path):
-                with st.spinner("جاري معالجة الصوت..."):
-                    asyncio.run(generate_voice(item['en'], f_name, u_voice, f"{u_speed}%"))
+            # إنشاء اسم ملف فريد يجمع بين (النص + نوع الصوت + السرعة)
+            # هذا يضمن أنه عند تغيير أي إعداد، يتغير اسم الملف فوراً
+            text_hash = hashlib.md5(f"{item['en']}_{v_short_name}_{selected_speed}".encode()).hexdigest()
+            filename = f"audio_{text_hash}.mp3"
+            filepath = os.path.join(AUDIO_DIR, filename)
             
-            st.markdown(get_audio_html(f_path), unsafe_allow_html=True)
+            if not os.path.exists(filepath):
+                with st.spinner("جاري تبديل صوت المعلم..."):
+                    asyncio.run(generate_voice(item['en'], filename, voice_id, f"{selected_speed}%"))
+            
+            # عرض الصوت (سيعمل على الأيفون ويحدث فوراً عند تغيير الصوت)
+            st.markdown(get_audio_html(filepath), unsafe_allow_html=True)
             st.divider()
     else:
-        st.info("المنصة جاهزة، بانتظار إضافة المحتوى من لوحة الإدارة.")
+        st.info("مرحباً بك! بانتظار رفع الدروس من قبل الإدارة.")
