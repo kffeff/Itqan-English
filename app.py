@@ -20,6 +20,8 @@ INPUT_BG= "#334155" if DK else "#1e293b"
 st.markdown(f"""<style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
 #MainMenu,footer,header,.stDeployButton{{visibility:hidden;}}
+[data-testid="stSidebarCollapseButton"]{{display:block!important;visibility:visible!important;}}
+button[kind="header"]{{display:block!important;visibility:visible!important;}}
 .stApp{{background-color:{BG};font-family:'Cairo',sans-serif;}}
 .card{{background:{CARD_BG};padding:32px 28px 24px;border-radius:22px;border-right:10px solid #2563eb;
     margin-bottom:10px;box-shadow:0 8px 32px rgba(37,99,235,0.12);text-align:center;width:100%;
