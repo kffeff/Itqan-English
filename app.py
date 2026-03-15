@@ -3,9 +3,6 @@ import streamlit.components.v1 as components
 import os, asyncio, edge_tts, base64, hashlib, random, time
 from supabase import create_client, Client
 
-# ══════════════════════════════════════════════════════
-# 1. Page config + Theme
-# ══════════════════════════════════════════════════════
 st.set_page_config(page_title="منصة إتقان اللغة الإنجليزية", layout="wide", page_icon="🎓")
 
 if "dark_mode" not in st.session_state: st.session_state.dark_mode = False
@@ -22,34 +19,8 @@ st.markdown(f"""<style>
 #MainMenu,footer,header,.stDeployButton{{display:none!important;visibility:hidden!important;}}
 .stApp{{background-color:{BG};font-family:'Cairo',sans-serif;}}
 
-/* ══ تحريك السايدبار لليمين ══ */
-[data-testid="stSidebar"]{{
-    background:{CARD_BG}!important;
-    border-right:none!important;
-    border-left:4px solid #2563eb!important;
-    right:0!important;
-    left:auto!important;
-}}
-[data-testid="stSidebar"] > div:first-child {{
-    background:{CARD_BG}!important;
-}}
-[data-testid="stSidebar"] * {{
-    font-family:'Cairo',sans-serif!important;
-    color:{TEXT}!important;
-}}
-/* تحريك زر فتح/اغلاق السايدبار لليمين */
-[data-testid="stSidebarCollapseButton"] {{
-    right:0!important;
-    left:auto!important;
-}}
-/* تحريك المحتوى الرئيسي */
-.stMainBlockContainer {{
-    margin-right: 0!important;
-    margin-left: 0!important;
-}}
-section[data-testid="stSidebarContent"] {{
-    direction: rtl!important;
-}}
+[data-testid="stSidebar"]{{background:{CARD_BG}!important;border-left:4px solid #2563eb!important;}}
+[data-testid="stSidebar"] *{{font-family:'Cairo',sans-serif!important;color:{TEXT}!important;}}
 
 .card{{background:{CARD_BG};padding:32px 28px 24px;border-radius:22px;border-right:10px solid #2563eb;
     margin-bottom:10px;box-shadow:0 8px 32px rgba(37,99,235,0.12);text-align:center;width:100%;
@@ -123,52 +94,31 @@ ul[data-baseweb="menu"] li{{color:#ffffff!important;}}
 ul[data-baseweb="menu"] li:hover{{background-color:#2563eb!important;}}
 </style>""", unsafe_allow_html=True)
 
-
-# ══════════════════════════════════════════════════════
-# 2. Supabase connection
-# ══════════════════════════════════════════════════════
 SUPABASE_URL = "https://iwpccslbxlbaargqpgeg.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3cGNjc2xieGxiYWFyZ3FwZ2VnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTc1MjcsImV4cCI6MjA4OTA5MzUyN30.9Lt0qCuVb6qu5KoSafSUCqN1Hb6P89EPO72grxSjqkg"
 
 @st.cache_resource
 def get_supabase() -> Client:
     return create_client(SUPABASE_URL, SUPABASE_KEY)
-
 supabase = get_supabase()
 
-
-# ══════════════════════════════════════════════════════
-# 3. Database functions
-# ══════════════════════════════════════════════════════
 def get_categories():
     res = supabase.table("categories").select("*").order("name").execute()
     return res.data or []
-
 def get_words(category_id):
     res = supabase.table("words").select("*").eq("category_id", category_id).execute()
     return res.data or []
-
 def add_category(name):
     supabase.table("categories").insert({"name": name}).execute()
-
 def delete_category(cat_id):
     supabase.table("categories").delete().eq("id", cat_id).execute()
-
 def add_word(category_id, en, ar, pron):
-    supabase.table("words").insert({
-        "category_id": category_id, "en": en, "ar": ar, "pron": pron
-    }).execute()
-
+    supabase.table("words").insert({"category_id": category_id, "en": en, "ar": ar, "pron": pron}).execute()
 def delete_word(word_id):
     supabase.table("words").delete().eq("id", word_id).execute()
 
-
-# ══════════════════════════════════════════════════════
-# 4. Audio helpers
-# ══════════════════════════════════════════════════════
 AUDIO_DIR = "audio_cache"
 os.makedirs(AUDIO_DIR, exist_ok=True)
-
 if not os.path.exists(os.path.join(AUDIO_DIR, ".voices_updated_v2")):
     for _f in os.listdir(AUDIO_DIR):
         if _f.endswith(".mp3"):
@@ -184,7 +134,6 @@ VOICES = {
 
 async def _gen(text, path, voice, rate):
     await edge_tts.Communicate(text, voice, rate=rate).save(path)
-
 def generate_voice(text, filename, voice, rate):
     try:
         loop = asyncio.get_event_loop()
@@ -192,23 +141,19 @@ def generate_voice(text, filename, voice, rate):
     except RuntimeError:
         loop = asyncio.new_event_loop(); asyncio.set_event_loop(loop)
     loop.run_until_complete(_gen(text, os.path.join(AUDIO_DIR, filename), voice, rate))
-
 def render_audio(fp):
     with open(fp, "rb") as f: b64 = base64.b64encode(f.read()).decode()
     components.html("<html><body style='margin:0;padding:4px 0 0 0;background:transparent;'>"
         "<audio controls preload='auto' style='width:100%;height:48px;border-radius:12px;display:block;'>"
         "<source src='data:audio/mpeg;base64," + b64 + "' type='audio/mpeg'></audio></body></html>", height=64)
-
 def ensure_audio(text, v_id, speed):
     fhash = hashlib.md5(f"{text}|{v_id}|{speed}".encode()).hexdigest()
     fname = f"audio_{fhash}.mp3"; fpath = os.path.join(AUDIO_DIR, fname)
     if not os.path.exists(fpath):
         with st.spinner("جار توليد الصوت..."): generate_voice(text, fname, v_id, f"{speed:+d}%")
     return fpath
-
 def normalize(s):
     return s.strip().replace("،","").replace(",","").replace(".","").replace(" ","").lower()
-
 def make_mcq_choices(items, correct_item):
     wrong = [it for it in items if it["en"] != correct_item["en"]]
     chosen = random.sample(wrong, min(3, len(wrong)))
@@ -216,39 +161,25 @@ def make_mcq_choices(items, correct_item):
     random.shuffle(choices)
     return choices
 
-
-# ══════════════════════════════════════════════════════
-# 5. Session state
-# ══════════════════════════════════════════════════════
 DEFAULTS = {
-    "quiz_active":False,"quiz_mode":"normal",
-    "quiz_items":[],"quiz_idx":0,"quiz_score":0,
-    "quiz_answered":False,"quiz_user_ans":"","quiz_show_ans":False,
-    "quiz_results":[],"timer_start":0,"timer_expired":False,
-    "mcq_choices":[],"mcq_selected":None,
+    "quiz_active":False,"quiz_mode":"normal","quiz_items":[],"quiz_idx":0,"quiz_score":0,
+    "quiz_answered":False,"quiz_user_ans":"","quiz_show_ans":False,"quiz_results":[],
+    "timer_start":0,"timer_expired":False,"mcq_choices":[],"mcq_selected":None,
     "smart_wrong":[],"smart_round":1,
 }
 for k, v in DEFAULTS.items():
     if k not in st.session_state: st.session_state[k] = v
 
-
-# ══════════════════════════════════════════════════════
-# 6. Load data
-# ══════════════════════════════════════════════════════
 is_admin = st.query_params.get("admin") == "true"
 
 @st.cache_data(ttl=30)
 def cached_categories():
     return get_categories()
-
 categories = cached_categories()
 cat_names  = [c["name"] for c in categories]
 cat_map    = {c["name"]: c["id"] for c in categories}
 
-
-# ══════════════════════════════════════════════════════
-# 7. Sidebar على اليمين
-# ══════════════════════════════════════════════════════
+# ══ السايدبار على اليسار (الافتراضي) ══
 with st.sidebar:
     st.markdown("## ⚙️ الإعدادات")
     st.divider()
@@ -260,31 +191,20 @@ with st.sidebar:
     if st.button("🌙 الوضع الليلي" if not DK else "☀️ الوضع النهاري", use_container_width=True):
         st.session_state.dark_mode = not st.session_state.dark_mode; st.rerun()
 
-
-# ══════════════════════════════════════════════════════
-# 8. Header
-# ══════════════════════════════════════════════════════
 st.markdown("<div class='platform-title'>🎓 منصة اتقان اللغة الانجليزية</div>"
             "<div class='platform-subtitle'>تعلم الكلمات والجمل بنطق صحيح واضح</div>",
             unsafe_allow_html=True)
 
-
-# ══════════════════════════════════════════════════════
-# 9. ADMIN
-# ══════════════════════════════════════════════════════
 if is_admin:
     st.title("🛠 لوحة الادارة الكاملة")
     tab1, tab2 = st.tabs(["➕ اضافة محتوى", "🗑 ادارة وحذف"])
-
     with tab1:
         new_c = st.text_input("اسم القسم الجديد:")
         if st.button("💾 حفظ القسم الجديد") and new_c.strip():
             if new_c.strip() not in cat_names:
-                add_category(new_c.strip())
-                st.cache_data.clear()
+                add_category(new_c.strip()); st.cache_data.clear()
                 st.success(f"تم انشاء القسم: {new_c.strip()}"); st.rerun()
             else: st.warning("هذا القسم موجود بالفعل.")
-
         if categories:
             st.divider()
             target_name = st.selectbox("اضافة الى قسم:", cat_names, key="add_cat")
@@ -296,18 +216,14 @@ if is_admin:
                     parts = [p.strip() for p in line.split("|")]
                     if len(parts) == 3 and all(parts):
                         add_word(cat_map[target_name], parts[0], parts[1], parts[2]); added += 1
-                if added:
-                    st.cache_data.clear()
-                    st.success(f"تم حفظ {added} ادخال!"); st.rerun()
+                if added: st.cache_data.clear(); st.success(f"تم حفظ {added} ادخال!"); st.rerun()
                 else: st.error("تاكد من الصيغة: كلمة | ترجمة | نطق")
-
     with tab2:
         if categories:
             st.subheader("حذف قسم كامل")
             cat_to_del = st.selectbox("اختر القسم:", cat_names, key="del_cat")
             if st.button("🔥 حذف القسم نهائيا"):
-                delete_category(cat_map[cat_to_del])
-                st.cache_data.clear(); st.rerun()
+                delete_category(cat_map[cat_to_del]); st.cache_data.clear(); st.rerun()
             st.divider()
             st.subheader("حذف جملة/كلمة من قسم")
             cat_manage = st.selectbox("اختر القسم:", cat_names, key="manage_cat")
@@ -317,15 +233,9 @@ if is_admin:
                     c1, c2 = st.columns([5, 1])
                     c1.write(f"**{item['en']}** — {item['ar']}  |  *{item['pron']}*")
                     if c2.button("🗑", key=f"del_w_{item['id']}"):
-                        delete_word(item["id"])
-                        st.cache_data.clear(); st.rerun()
+                        delete_word(item["id"]); st.cache_data.clear(); st.rerun()
             else: st.info("هذا القسم فارغ.")
         else: st.info("لا توجد اقسام بعد.")
-
-
-# ══════════════════════════════════════════════════════
-# 10. STUDENT VIEW
-# ══════════════════════════════════════════════════════
 else:
     if not categories:
         st.info("مرحبا بك! يرجى اضافة اقسام من لوحة الادارة اولا.")
@@ -335,7 +245,6 @@ else:
         @st.cache_data(ttl=60)
         def cached_words(cat_id):
             return get_words(cat_id)
-
         items = cached_words(cat_map[choice])
 
         if search_q:
@@ -346,7 +255,6 @@ else:
             st.warning("لا توجد نتائج.")
         else:
             v_id = VOICES[selected_voice_key]
-
             st.markdown("**اختر وضع التعلم:**")
             r1c1,r1c2,r1c3,r1c4 = st.columns(4)
             r2c1,r2c2,r2c3,_    = st.columns(4)
@@ -357,16 +265,14 @@ else:
                     "quiz_active":True,"quiz_mode":mode,"quiz_items":shuffled,
                     "quiz_idx":0,"quiz_score":0,"quiz_answered":False,
                     "quiz_user_ans":"","quiz_show_ans":False,"quiz_results":[],
-                    "mcq_choices":[],"mcq_selected":None,
-                    "smart_wrong":[],"smart_round":1,
+                    "mcq_choices":[],"mcq_selected":None,"smart_wrong":[],"smart_round":1,
                     "timer_start":time.time(),"timer_expired":False,
                 }); st.rerun()
 
             def mode_btn(col, label, mode_name):
                 active = st.session_state.quiz_active and st.session_state.quiz_mode==mode_name
                 with col:
-                    return st.button(label, use_container_width=True,
-                        type="primary" if active else "secondary")
+                    return st.button(label, use_container_width=True, type="primary" if active else "secondary")
 
             if r1c1.button("📖 دراسة", use_container_width=True,
                            type="primary" if not st.session_state.quiz_active else "secondary"):
@@ -380,7 +286,6 @@ else:
 
             st.markdown("<hr>", unsafe_allow_html=True)
 
-            # ── وضع الدراسة ──
             if not st.session_state.quiz_active:
                 if st.button("🖨️ طباعة القسم كـ PDF", use_container_width=False):
                     cards_html = "".join(
@@ -418,8 +323,6 @@ else:
                         unsafe_allow_html=True)
                     render_audio(ensure_audio(item["en"], v_id, selected_speed))
                     st.markdown("<hr>", unsafe_allow_html=True)
-
-            # ── أوضاع الاختبار ──
             else:
                 mode = st.session_state.quiz_mode
                 if mode == "smart":
@@ -512,7 +415,6 @@ else:
                 render_audio(ensure_audio(item["en"], v_id, selected_speed))
                 st.markdown("<br>", unsafe_allow_html=True)
 
-                # MCQ
                 if mode=="mcq":
                     if not st.session_state.mcq_choices:
                         st.session_state.mcq_choices = make_mcq_choices(items, item)
@@ -543,8 +445,6 @@ else:
                             st.session_state.update({"quiz_idx":idx+1,"quiz_answered":False,
                                 "mcq_choices":[],"mcq_selected":None,
                                 "timer_start":time.time(),"timer_expired":False}); st.rerun()
-
-                # النصية
                 else:
                     if not st.session_state.quiz_answered:
                         ph  = "اكتب الكلمة/الجملة بالإنجليزية..." if mode=="reverse" else "اكتب اجابتك هنا..."
