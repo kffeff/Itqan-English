@@ -207,7 +207,7 @@ if is_admin:
         if st.button("🚪 خروج", use_container_width=True):
             st.session_state.admin_auth = False; st.rerun()
 
-    tab1, tab2 = st.tabs(["➕ اضافة محتوى", "🗑 ادارة وحذف"])
+    tab1, tab2, tab3 = st.tabs(["➕ اضافة محتوى", "🗑 ادارة وحذف", "🔁 حذف المكرر"])
     with tab1:
         new_c = st.text_input("اسم القسم الجديد:")
         if st.button("💾 حفظ القسم الجديد") and new_c.strip():
@@ -246,6 +246,49 @@ if is_admin:
                         delete_word(item["id"]); st.cache_data.clear(); st.rerun()
             else: st.info("هذا القسم فارغ.")
         else: st.info("لا توجد اقسام بعد.")
+
+    with tab3:
+        st.subheader("🔁 كشف وحذف الجمل المكررة")
+        if categories:
+            cat_dup = st.selectbox("اختر القسم للفحص:", ["📂 كل الأقسام"] + cat_names, key="dup_cat")
+            if st.button("🔍 فحص المكررات", type="primary", use_container_width=True):
+                all_dups = []
+                cats_to_check = categories if cat_dup == "📂 كل الأقسام" else [c for c in categories if c["name"] == cat_dup]
+                for cat in cats_to_check:
+                    words = get_words(cat["id"])
+                    seen = {}
+                    for w in words:
+                        key = w["en"].strip().lower()
+                        if key in seen:
+                            all_dups.append({"item": w, "cat": cat["name"]})
+                        else:
+                            seen[key] = w
+                st.session_state["dups"] = all_dups
+
+            if "dups" in st.session_state:
+                dups = st.session_state["dups"]
+                if not dups:
+                    st.success("✅ لا توجد جمل مكررة!")
+                else:
+                    st.warning(f"⚠️ وجدنا {len(dups)} جملة مكررة:")
+                    st.divider()
+                    for d in dups:
+                        c1, c2 = st.columns([5, 1])
+                        c1.write(f"**{d['item']['en']}** — {d['item']['ar']} | قسم: *{d['cat']}*")
+                        if c2.button("🗑", key=f"del_dup_{d['item']['id']}"):
+                            delete_word(d["item"]["id"])
+                            st.cache_data.clear()
+                            st.session_state["dups"] = [x for x in dups if x["item"]["id"] != d["item"]["id"]]
+                            st.rerun()
+                    st.divider()
+                    if st.button("🔥 حذف كل المكررات دفعة واحدة", type="primary", use_container_width=True):
+                        for d in dups:
+                            delete_word(d["item"]["id"])
+                        st.cache_data.clear()
+                        del st.session_state["dups"]
+                        st.success("✅ تم حذف جميع المكررات!"); st.rerun()
+        else:
+            st.info("لا توجد اقسام بعد.")
 
 # ══ STUDENT VIEW ══
 else:
