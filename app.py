@@ -19,7 +19,7 @@ INPUT_BG= "#334155" if DK else "#1e293b"
 
 st.markdown(f"""<style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-#MainMenu,footer,header,.stDeployButton,[data-testid='stSidebar'],[data-testid='stSidebarCollapseButton']{{display:none!important;visibility:hidden!important;}}
+#MainMenu,footer,header,.stDeployButton{{display:none!important;}}
 .stApp{{background-color:{BG};font-family:'Cairo',sans-serif;}}
 .card{{background:{CARD_BG};padding:32px 28px 24px;border-radius:22px;border-right:10px solid #2563eb;
     margin-bottom:10px;box-shadow:0 8px 32px rgba(37,99,235,0.12);text-align:center;width:100%;
@@ -269,9 +269,9 @@ cat_map    = {c["name"]: c["id"] for c in categories}
 
 
 # ══════════════════════════════════════════════════════
-# 7. Popover
+# 7. Settings Button using components.html
 # ══════════════════════════════════════════════════════
-with st.popover("⚙"):
+with st.sidebar:
     st.markdown("### ⚙️ اعدادات النطق")
     selected_voice_key = st.selectbox("اختر المعلم:", list(VOICES.keys()), key="v_sel")
     selected_speed     = st.slider("سرعة النطق:", -50, 0, -30, 5, key="s_sel")
