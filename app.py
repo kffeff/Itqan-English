@@ -283,7 +283,7 @@ else:
                 st.session_state.quiz_active = False; st.rerun()
             if mode_btn(r1c2,"📝 اختبار","normal"): start_quiz("normal")
             if mode_btn(r1c3,"🔊 استماع","listen"): start_quiz("listen")
-            if mode_btn(r1c4,"⏱️ موقوت","timer"): start_quiz("timer")
+            if mode_btn(r1c4,"⏱️ مؤقت","timer"): start_quiz("timer")
             if mode_btn(r2c1,"🎯 اختيار متعدد","mcq"): start_quiz("mcq")
             if mode_btn(r2c2,"🔤 اختبار عكسي","reverse"): start_quiz("reverse")
             if mode_btn(r2c3,"🔁 تكرار ذكي","smart"): start_quiz("smart")
