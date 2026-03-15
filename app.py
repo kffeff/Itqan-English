@@ -352,7 +352,7 @@ else:
                             }]
                         }
                         res = requests.post(
-                            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={gemini_key}",
+                            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={gemini_key}",
                             headers={"Content-Type": "application/json"},
                             json=payload, timeout=30)
                         res_json = res.json()
