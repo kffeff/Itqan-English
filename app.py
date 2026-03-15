@@ -16,12 +16,8 @@ INPUT_BG= "#334155" if DK else "#1e293b"
 
 st.markdown(f"""<style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-#MainMenu,footer,header,.stDeployButton{{display:none!important;visibility:hidden!important;}}
+#MainMenu,footer,header,.stDeployButton,[data-testid='stSidebar'],[data-testid='stSidebarCollapseButton']{{display:none!important;visibility:hidden!important;}}
 .stApp{{background-color:{BG};font-family:'Cairo',sans-serif;}}
-
-[data-testid="stSidebar"]{{background:{CARD_BG}!important;border-left:4px solid #2563eb!important;}}
-[data-testid="stSidebar"] *{{font-family:'Cairo',sans-serif!important;color:{TEXT}!important;}}
-
 .card{{background:{CARD_BG};padding:32px 28px 24px;border-radius:22px;border-right:10px solid #2563eb;
     margin-bottom:10px;box-shadow:0 8px 32px rgba(37,99,235,0.12);text-align:center;width:100%;
     transition:transform 0.18s ease,box-shadow 0.18s ease;}}
@@ -75,6 +71,8 @@ st.markdown(f"""<style>
     font-family:'Cairo',sans-serif;display:inline-block;margin-bottom:8px;}}
 .platform-title{{text-align:center;color:#2563eb;font-family:'Cairo',sans-serif;font-size:42px;font-weight:900;margin-bottom:8px;}}
 .platform-subtitle{{text-align:center;color:{SUB};font-family:'Cairo',sans-serif;font-size:18px;margin-bottom:30px;}}
+.settings-box{{background:{CARD_BG};border-radius:16px;padding:20px 24px;
+    border:2px solid {BORDER};margin-bottom:20px;}}
 hr{{border:none;border-top:2px solid {BORDER};margin:4px 0 20px;}}
 label,.stTextInput label,.stTextArea label,.stSelectbox label,.stSlider label,
 .stTabs [data-baseweb="tab"],h1,h2,h3,h4,p,div[data-testid="stText"],.stMarkdown p,
@@ -179,22 +177,12 @@ categories = cached_categories()
 cat_names  = [c["name"] for c in categories]
 cat_map    = {c["name"]: c["id"] for c in categories}
 
-# ══ السايدبار على اليسار (الافتراضي) ══
-with st.sidebar:
-    st.markdown("## ⚙️ الإعدادات")
-    st.divider()
-    selected_voice_key = st.selectbox("🎙️ اختر المعلم:", list(VOICES.keys()), key="v_sel")
-    selected_speed     = st.slider("⚡ سرعة النطق:", -50, 0, -30, 5, key="s_sel")
-    st.divider()
-    search_q = st.text_input("🔍 بحث سريع:", key="search_q")
-    st.divider()
-    if st.button("🌙 الوضع الليلي" if not DK else "☀️ الوضع النهاري", use_container_width=True):
-        st.session_state.dark_mode = not st.session_state.dark_mode; st.rerun()
-
+# ══ Header ══
 st.markdown("<div class='platform-title'>🎓 منصة اتقان اللغة الانجليزية</div>"
             "<div class='platform-subtitle'>تعلم الكلمات والجمل بنطق صحيح واضح</div>",
             unsafe_allow_html=True)
 
+# ══ ADMIN ══
 if is_admin:
     st.title("🛠 لوحة الادارة الكاملة")
     tab1, tab2 = st.tabs(["➕ اضافة محتوى", "🗑 ادارة وحذف"])
@@ -236,25 +224,41 @@ if is_admin:
                         delete_word(item["id"]); st.cache_data.clear(); st.rerun()
             else: st.info("هذا القسم فارغ.")
         else: st.info("لا توجد اقسام بعد.")
+
+# ══ STUDENT VIEW ══
 else:
     if not categories:
         st.info("مرحبا بك! يرجى اضافة اقسام من لوحة الادارة اولا.")
     else:
+        # ── تبويبة الأقسام ──
         choice = st.selectbox("📂 اختر القسم الذي يناسبك:", cat_names)
+
+        # ── الإعدادات تحت تبويبة الأقسام مباشرة ──
+        with st.expander("⚙️ الإعدادات", expanded=False):
+            col1, col2, col3 = st.columns([2, 2, 1])
+            with col1:
+                selected_voice_key = st.selectbox("🎙️ اختر المعلم:", list(VOICES.keys()), key="v_sel")
+            with col2:
+                search_q = st.text_input("🔍 بحث سريع:", key="search_q")
+            with col3:
+                selected_speed = st.slider("⚡ سرعة النطق:", -50, 0, -30, 5, key="s_sel")
+                if st.button("🌙" if not DK else "☀️", use_container_width=True):
+                    st.session_state.dark_mode = not st.session_state.dark_mode; st.rerun()
 
         @st.cache_data(ttl=60)
         def cached_words(cat_id):
             return get_words(cat_id)
         items = cached_words(cat_map[choice])
 
-        if search_q:
-            q = search_q.lower()
+        if "search_q" in st.session_state and st.session_state.search_q:
+            q = st.session_state.search_q.lower()
             items = [it for it in items if q in it["en"].lower() or q in it["ar"] or q in it["pron"]]
 
         if not items:
             st.warning("لا توجد نتائج.")
         else:
             v_id = VOICES[selected_voice_key]
+
             st.markdown("**اختر وضع التعلم:**")
             r1c1,r1c2,r1c3,r1c4 = st.columns(4)
             r2c1,r2c2,r2c3,_    = st.columns(4)
