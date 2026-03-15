@@ -50,6 +50,18 @@ st.markdown(f"""<style>
     color:#7f1d1d;font-family:'Cairo',sans-serif;}}
 .quiz-reveal{{background:linear-gradient(135deg,#ede9fe,#ddd6fe);border:3px solid #7c3aed;
     border-radius:16px;padding:20px;margin-top:16px;font-family:'Cairo',sans-serif;}}
+/* ── خيارات MCQ: نص مرئي دائماً ── */
+.mcq-opt{{
+    width:100%;padding:16px 20px;border-radius:14px;
+    border:2px solid {BORDER};background:{CARD_BG};
+    color:{TEXT}!important;font-size:22px;font-weight:700;
+    font-family:'Cairo',sans-serif;margin:6px 0;
+    text-align:center;cursor:pointer;transition:all 0.15s;
+    display:block;
+}}
+.mcq-opt-correct{{background:linear-gradient(135deg,#d1fae5,#a7f3d0)!important;border-color:#059669!important;color:#065f46!important;}}
+.mcq-opt-wrong{{background:linear-gradient(135deg,#fee2e2,#fecaca)!important;border-color:#dc2626!important;color:#7f1d1d!important;}}
+.mcq-opt-neutral{{opacity:0.5;}}
 .quiz-score{{background:linear-gradient(135deg,#1e293b,#0f172a);border-radius:24px;padding:40px;
     text-align:center;color:white;font-family:'Cairo',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,0.35);}}
 .score-number{{font-size:80px;font-weight:900;color:#fbbf24;line-height:1;}}
@@ -87,8 +99,31 @@ div[data-testid="stPopover"]>button{{border-radius:50%!important;width:62px!impo
 hr{{border:none;border-top:2px solid {BORDER};margin:4px 0 20px;}}
 label,.stTextInput label,.stTextArea label,.stSelectbox label,.stSlider label,
 .stTabs [data-baseweb="tab"],h1,h2,h3,h4,p,div[data-testid="stText"],.stMarkdown p,
-.stSelectbox span,div[data-baseweb="select"] span,.stAlert p,.stInfo p{{color:{TEXT}!important;font-weight:600;}}
+.stAlert p,.stInfo p{{color:{TEXT}!important;font-weight:600;}}
 .stTabs [data-baseweb="tab"][aria-selected="true"]{{color:#2563eb!important;}}
+
+/* ── أزرار Streamlit: نص أبيض دائماً على خلفية داكنة ── */
+.stButton>button{{
+    color:#ffffff!important;
+    font-family:'Cairo',sans-serif!important;
+    font-weight:700!important;
+}}
+/* زر primary: أزرق */
+.stButton>button[kind="primary"]{{
+    background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;
+    border:none!important;
+    color:#ffffff!important;
+}}
+/* زر secondary: رمادي داكن */
+.stButton>button[kind="secondary"]{{
+    background:#1e293b!important;
+    border:2px solid #334155!important;
+    color:#ffffff!important;
+}}
+.stButton>button:hover{{
+    opacity:0.88!important;
+    transform:translateY(-1px)!important;
+}}
 .stTextInput input,.stTextArea textarea{{background-color:{INPUT_BG}!important;color:#ffffff!important;
     border:2px solid #2563eb!important;border-radius:10px!important;font-family:'Cairo',sans-serif!important;}}
 .stTextInput input::placeholder,.stTextArea textarea::placeholder{{color:#94a3b8!important;}}
@@ -480,34 +515,35 @@ else:
                 # MCQ: أزرار الخيارات
                 # ══════════════════════════════════
                 if mode=="mcq":
+                    if not st.session_state.mcq_choices:
+                        st.session_state.mcq_choices=make_mcq_choices(items,item,"ar")
+                    choices=st.session_state.mcq_choices
+                    correct_ar=item["ar"]
+
                     if not st.session_state.quiz_answered:
-                        # توليد الخيارات مرة واحدة فقط
-                        if not st.session_state.mcq_choices:
-                            st.session_state.mcq_choices=make_mcq_choices(items,item,"ar")
-                        choices=st.session_state.mcq_choices
+                        # عرض الخيارات كأزرار Streamlit عادية
                         for i,choice_text in enumerate(choices):
-                            if st.button(choice_text,key=f"mcq_{idx}_{i}",use_container_width=True):
+                            if st.button(choice_text, key=f"mcq_{idx}_{i}", use_container_width=True):
                                 st.session_state.quiz_answered=True
                                 st.session_state.mcq_selected=choice_text
                                 st.rerun()
                     else:
-                        correct_ar=item["ar"]
                         selected=st.session_state.mcq_selected
                         is_correct = selected and normalize(selected)==normalize(correct_ar)
-                        for ch in st.session_state.mcq_choices:
+                        # عرض الخيارات مع التلوين بعد الاجابة
+                        for ch in choices:
                             if normalize(ch)==normalize(correct_ar):
-                                st.markdown(f"<div class='quiz-correct'>✅ {ch}</div>",unsafe_allow_html=True)
+                                st.markdown(f"<div class='mcq-opt mcq-opt-correct'>✅ {ch}</div>",unsafe_allow_html=True)
                             elif ch==selected and not is_correct:
-                                st.markdown(f"<div class='quiz-wrong'>❌ {ch}</div>",unsafe_allow_html=True)
+                                st.markdown(f"<div class='mcq-opt mcq-opt-wrong'>❌ {ch}</div>",unsafe_allow_html=True)
                             else:
-                                st.markdown(f"<div style='background:{CARD_BG};border:2px solid {BORDER};border-radius:14px;"
-                                    f"padding:14px;text-align:center;color:{SUB};font-size:20px;margin:6px 0;'>{ch}</div>",
-                                    unsafe_allow_html=True)
+                                st.markdown(f"<div class='mcq-opt mcq-opt-neutral'>{ch}</div>",unsafe_allow_html=True)
+                        st.markdown("<br>",unsafe_allow_html=True)
                         if is_correct:
                             st.session_state.quiz_score+=1
                             st.success("🎉 اجابة صحيحة!")
                         else:
-                            st.error(f"❌ الصحيحة: {correct_ar}")
+                            st.error(f"الصحيحة: {correct_ar}")
                         if mode=="smart" and not is_correct:
                             st.session_state.smart_wrong.append(item)
                         st.session_state.quiz_results.append({"en":item["en"],"ar":correct_ar,
