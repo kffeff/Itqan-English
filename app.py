@@ -73,34 +73,53 @@ st.markdown(f"""<style>
     border-radius:99px;padding:4px 14px;font-size:14px;font-weight:700;
     font-family:'Cairo',sans-serif;display:inline-block;margin-bottom:8px;}}
 
-/* ══════ إصلاح زر الإعدادات - إخفاء النص الأبيض expand_more ══════ */
+/* ══════ إصلاح زر الإعدادات - إخفاء النص expand_more ══════ */
+div[data-testid="stPopover"]{{
+    position:fixed!important;bottom:30px!important;right:30px!important;z-index:9999!important;
+}}
 div[data-testid="stPopover"]>button{{
     border-radius:50%!important;width:56px!important;height:56px!important;
-    font-size:22px!important;
     background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;
     color:white!important;border:none!important;
     box-shadow:0 6px 24px rgba(37,99,255,0.45)!important;
-    position:fixed!important;bottom:30px!important;right:30px!important;z-index:9999!important;
     overflow:hidden!important;
     display:flex!important;align-items:center!important;justify-content:center!important;
+    font-size:22px!important;
 }}
-div[data-testid="stPopover"]>button p,
-div[data-testid="stPopover"]>button span,
-div[data-testid="stPopover"]>button div,
-div[data-testid="stPopover"]>button *:not(svg):not(svg *){{
+div[data-testid="stPopover"]>button::before{{
+    content:'⚙'!important;
+    font-size:22px!important;
+    position:absolute!important;
+    color:white!important;
+    z-index:2!important;
+}}
+div[data-testid="stPopover"]>button *{{
+    opacity:0!important;
     font-size:0!important;
+    color:transparent!important;
+    visibility:hidden!important;
     width:0!important;
     height:0!important;
     overflow:hidden!important;
     position:absolute!important;
-    opacity:0!important;
     pointer-events:none!important;
-    display:none!important;
-    visibility:hidden!important;
-    color:transparent!important;
+    display:block!important;
     line-height:0!important;
     margin:0!important;
     padding:0!important;
+}}
+/* إخفاء النص "expand_more" الذي يظهر خارج الزر */
+div[data-testid="stPopover"]>*:not(button){{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    width:0!important;
+    height:0!important;
+    overflow:hidden!important;
+    position:absolute!important;
+    pointer-events:none!important;
+    font-size:0!important;
+    color:transparent!important;
 }}
 /* ══════ نهاية الإصلاح ══════ */
 
@@ -274,11 +293,40 @@ with st.popover("⚙"):
 
 
 # ══════════════════════════════════════════════════════
-# 8. Header
+# 8. Header + JS fix for expand_more text
 # ══════════════════════════════════════════════════════
 st.markdown("<div class='platform-title'>🎓 منصة اتقان اللغة الانجليزية</div>"
             "<div class='platform-subtitle'>تعلم الكلمات والجمل بنطق صحيح واضح</div>",
             unsafe_allow_html=True)
+
+# إخفاء نص expand_more بالجافاسكريبت
+components.html("""
+<script>
+function hideExpandMore() {
+    const popovers = document.querySelectorAll('[data-testid="stPopover"]');
+    popovers.forEach(function(pop) {
+        pop.childNodes.forEach(function(node) {
+            if (node.nodeType === 3) { node.textContent = ''; }
+        });
+        const btn = pop.querySelector('button');
+        if (btn) {
+            btn.childNodes.forEach(function(node) {
+                if (node.nodeType === 3) { node.textContent = ''; }
+            });
+            btn.querySelectorAll('*').forEach(function(el) {
+                if (el.tagName !== 'SVG' && !el.closest('svg')) {
+                    el.style.cssText = 'opacity:0!important;font-size:0!important;color:transparent!important;visibility:hidden!important;width:0!important;height:0!important;overflow:hidden!important;position:absolute!important;line-height:0!important;margin:0!important;padding:0!important;';
+                }
+            });
+        }
+    });
+}
+hideExpandMore();
+setTimeout(hideExpandMore, 300);
+setTimeout(hideExpandMore, 1000);
+new MutationObserver(hideExpandMore).observe(document.body, {childList:true, subtree:true});
+</script>
+""", height=0)
 
 
 
