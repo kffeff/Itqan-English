@@ -102,27 +102,34 @@ label,.stTextInput label,.stTextArea label,.stSelectbox label,.stSlider label,
 .stAlert p,.stInfo p{{color:{TEXT}!important;font-weight:600;}}
 .stTabs [data-baseweb="tab"][aria-selected="true"]{{color:#2563eb!important;}}
 
-/* ── أزرار Streamlit: نص أبيض دائماً على خلفية داكنة ── */
-.stButton>button{{
-    color:#ffffff!important;
-    font-family:'Cairo',sans-serif!important;
-    font-weight:700!important;
+/* ── أزرار Streamlit: نص أبيض دائماً ── */
+.stButton > button,
+.stButton > button *,
+.stButton > button p,
+.stButton > button span,
+.stButton > button div {{
+    color: #ffffff !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 700 !important;
 }}
-/* زر primary: أزرق */
-.stButton>button[kind="primary"]{{
-    background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;
-    border:none!important;
-    color:#ffffff!important;
+.stButton > button {{
+    background: #1e293b !important;
+    border: 2px solid #334155 !important;
+    border-radius: 10px !important;
+    transition: all 0.15s ease !important;
 }}
-/* زر secondary: رمادي داكن */
-.stButton>button[kind="secondary"]{{
-    background:#1e293b!important;
-    border:2px solid #334155!important;
-    color:#ffffff!important;
+.stButton > button:hover {{
+    background: #2d3f55 !important;
+    border-color: #2563eb !important;
+    transform: translateY(-1px) !important;
 }}
-.stButton>button:hover{{
-    opacity:0.88!important;
-    transform:translateY(-1px)!important;
+/* زر primary */
+button[kind="primaryFormSubmit"],
+.stButton > button[data-testid*="primary"],
+[data-testid="stFormSubmitButton"] button,
+.stButton > button:is([kind="primary"]) {{
+    background: linear-gradient(135deg,#2563eb,#1d4ed8) !important;
+    border: none !important;
 }}
 .stTextInput input,.stTextArea textarea{{background-color:{INPUT_BG}!important;color:#ffffff!important;
     border:2px solid #2563eb!important;border-radius:10px!important;font-family:'Cairo',sans-serif!important;}}
@@ -144,6 +151,18 @@ div[data-testid="stPopoverBody"] div[data-baseweb="select"]>div{{background-colo
     border:2px solid #2563eb!important;border-radius:10px!important;}}
 div[data-testid="stPopoverBody"] div[data-baseweb="select"] span,
 div[data-testid="stPopoverBody"] div[data-baseweb="select"] div{{color:#ffffff!important;}}
+
+/* ── قاعدة شاملة: أي نص داخل خلفية داكنة يصبح أبيض ── */
+[style*="background-color: rgb(30, 41, 59)"] *,
+[style*="background-color: rgb(15, 23, 42)"] *,
+[style*="background-color: rgb(51, 65, 85)"] * {{
+    color: #ffffff !important;
+}}
+/* الأزرار بشكل عام - نص أبيض على أي حال */
+button, button *, button p, button span, button div,
+.stButton button, .stButton button * {{
+    color: #ffffff !important;
+}}
 </style>""", unsafe_allow_html=True)
 
 
