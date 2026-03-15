@@ -72,7 +72,8 @@ st.markdown(f"""<style>
 .repeat-badge{{background:linear-gradient(135deg,#f59e0b,#d97706);color:white;
     border-radius:99px;padding:4px 14px;font-size:14px;font-weight:700;
     font-family:'Cairo',sans-serif;display:inline-block;margin-bottom:8px;}}
-/* القائمة الجانبية */
+
+/* ══════ إصلاح زر الإعدادات - إخفاء النص الأبيض expand_more ══════ */
 div[data-testid="stPopover"]>button{{
     border-radius:50%!important;width:56px!important;height:56px!important;
     font-size:22px!important;
@@ -81,11 +82,28 @@ div[data-testid="stPopover"]>button{{
     box-shadow:0 6px 24px rgba(37,99,255,0.45)!important;
     position:fixed!important;bottom:30px!important;right:30px!important;z-index:9999!important;
     overflow:hidden!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;
 }}
-div[data-testid="stPopover"]>button>*:not(svg){{
-    font-size:0!important;width:0!important;height:0!important;
-    overflow:hidden!important;position:absolute!important;
+div[data-testid="stPopover"]>button p,
+div[data-testid="stPopover"]>button span,
+div[data-testid="stPopover"]>button div,
+div[data-testid="stPopover"]>button *:not(svg):not(svg *){{
+    font-size:0!important;
+    width:0!important;
+    height:0!important;
+    overflow:hidden!important;
+    position:absolute!important;
+    opacity:0!important;
+    pointer-events:none!important;
+    display:none!important;
+    visibility:hidden!important;
+    color:transparent!important;
+    line-height:0!important;
+    margin:0!important;
+    padding:0!important;
 }}
+/* ══════ نهاية الإصلاح ══════ */
+
 div[data-testid="stPopoverBody"] label,div[data-testid="stPopoverBody"] p,
 div[data-testid="stPopoverBody"] h3,div[data-testid="stPopoverBody"] .stMarkdown p,
 div[data-testid="stPopoverBody"] .stSlider label,
