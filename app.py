@@ -85,6 +85,12 @@ div[data-testid="stPopover"]>button{{
 div[data-testid="stPopover"]>button>*:not(svg){{
     font-size:0!important;width:0!important;height:0!important;
     overflow:hidden!important;position:absolute!important;
+    opacity:0!important;visibility:hidden!important;
+}}
+div[data-testid="stPopover"]>button p,
+div[data-testid="stPopover"]>button span:not([data-testid]),
+div[data-testid="stPopover"]>button div{{
+    display:none!important;
 }}
 div[data-testid="stPopoverBody"] label,div[data-testid="stPopoverBody"] p,
 div[data-testid="stPopoverBody"] h3,div[data-testid="stPopoverBody"] .stMarkdown p,
