@@ -72,36 +72,6 @@ st.markdown(f"""<style>
 .repeat-badge{{background:linear-gradient(135deg,#f59e0b,#d97706);color:white;
     border-radius:99px;padding:4px 14px;font-size:14px;font-weight:700;
     font-family:'Cairo',sans-serif;display:inline-block;margin-bottom:8px;}}
-/* القائمة الجانبية */
-div[data-testid="stPopover"]>button{{
-    border-radius:50%!important;width:56px!important;height:56px!important;
-    font-size:22px!important;
-    background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;
-    color:white!important;border:none!important;
-    box-shadow:0 6px 24px rgba(37,99,255,0.45)!important;
-    position:fixed!important;bottom:30px!important;right:30px!important;z-index:9999!important;
-    overflow:hidden!important;
-}}
-div[data-testid="stPopover"]>button>*:not(svg){{
-    font-size:0!important;width:0!important;height:0!important;
-    overflow:hidden!important;position:absolute!important;
-    opacity:0!important;visibility:hidden!important;
-}}
-div[data-testid="stPopover"]>button p,
-div[data-testid="stPopover"]>button span:not([data-testid]),
-div[data-testid="stPopover"]>button div{{
-    display:none!important;
-}}
-div[data-testid="stPopoverBody"] label,div[data-testid="stPopoverBody"] p,
-div[data-testid="stPopoverBody"] h3,div[data-testid="stPopoverBody"] .stMarkdown p,
-div[data-testid="stPopoverBody"] .stSlider label,
-div[data-testid="stPopoverBody"] .stSlider span{{color:#ffffff!important;}}
-div[data-testid="stPopoverBody"] input{{background-color:#334155!important;color:#ffffff!important;
-    border:2px solid #2563eb!important;border-radius:10px!important;}}
-div[data-testid="stPopoverBody"] div[data-baseweb="select"]>div{{background-color:#334155!important;
-    border:2px solid #2563eb!important;border-radius:10px!important;}}
-div[data-testid="stPopoverBody"] div[data-baseweb="select"] span,
-div[data-testid="stPopoverBody"] div[data-baseweb="select"] div{{color:#ffffff!important;}}
 .platform-title{{text-align:center;color:#2563eb;font-family:'Cairo',sans-serif;font-size:42px;font-weight:900;margin-bottom:8px;}}
 .platform-subtitle{{text-align:center;color:{SUB};font-family:'Cairo',sans-serif;font-size:18px;margin-bottom:30px;}}
 hr{{border:none;border-top:2px solid {BORDER};margin:4px 0 20px;}}
@@ -122,6 +92,57 @@ ul[data-baseweb="menu"]{{background-color:{INPUT_BG}!important;}}
 ul[data-baseweb="menu"] li{{color:#ffffff!important;}}
 ul[data-baseweb="menu"] li:hover{{background-color:#2563eb!important;}}
 
+/* ══ إصلاح زر الإعدادات - إخفاء كل النصوص ══ */
+div[data-testid="stPopover"]>button{{
+    border-radius:50%!important;
+    width:56px!important;height:56px!important;
+    background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;
+    color:white!important;border:none!important;
+    box-shadow:0 6px 24px rgba(37,99,255,0.45)!important;
+    position:fixed!important;bottom:30px!important;right:30px!important;
+    z-index:9999!important;
+    overflow:hidden!important;
+    font-size:22px!important;
+    line-height:1!important;
+    padding:0!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+}}
+div[data-testid="stPopover"]>button::before{{
+    content:"⚙️"!important;
+    font-size:24px!important;
+    display:block!important;
+    position:absolute!important;
+    top:50%!important;left:50%!important;
+    transform:translate(-50%,-50%)!important;
+    z-index:2!important;
+}}
+div[data-testid="stPopover"]>button > *,
+div[data-testid="stPopover"]>button p,
+div[data-testid="stPopover"]>button span,
+div[data-testid="stPopover"]>button div,
+div[data-testid="stPopover"]>button svg{{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    font-size:0!important;
+    width:0!important;
+    height:0!important;
+    overflow:hidden!important;
+    position:absolute!important;
+    pointer-events:none!important;
+}}
+div[data-testid="stPopoverBody"] label,div[data-testid="stPopoverBody"] p,
+div[data-testid="stPopoverBody"] h3,div[data-testid="stPopoverBody"] .stMarkdown p,
+div[data-testid="stPopoverBody"] .stSlider label,
+div[data-testid="stPopoverBody"] .stSlider span{{color:#ffffff!important;}}
+div[data-testid="stPopoverBody"] input{{background-color:#334155!important;color:#ffffff!important;
+    border:2px solid #2563eb!important;border-radius:10px!important;}}
+div[data-testid="stPopoverBody"] div[data-baseweb="select"]>div{{background-color:#334155!important;
+    border:2px solid #2563eb!important;border-radius:10px!important;}}
+div[data-testid="stPopoverBody"] div[data-baseweb="select"] span,
+div[data-testid="stPopoverBody"] div[data-baseweb="select"] div{{color:#ffffff!important;}}
 </style>""", unsafe_allow_html=True)
 
 
