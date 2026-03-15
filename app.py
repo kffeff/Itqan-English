@@ -352,10 +352,14 @@ else:
                             }]
                         }
                         res = requests.post(
-                            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}",
                             headers={"Content-Type": "application/json"},
                             json=payload, timeout=30)
-                        reply = res.json()["candidates"][0]["content"]["parts"][0]["text"]
+                        res_json = res.json()
+                        if "error" in res_json:
+                            reply = f"خطأ: {res_json['error']['message']}"
+                        else:
+                            reply = res_json["candidates"][0]["content"]["parts"][0]["text"]
                         st.session_state.chat_history.append({"role": "ai", "content": reply})
                     except Exception as e:
                         st.session_state.chat_history.append({"role": "ai", "content": f"حدث خطأ: {e}"})
