@@ -72,18 +72,27 @@ st.markdown(f"""<style>
 .repeat-badge{{background:linear-gradient(135deg,#f59e0b,#d97706);color:white;
     border-radius:99px;padding:4px 14px;font-size:14px;font-weight:700;
     font-family:'Cairo',sans-serif;display:inline-block;margin-bottom:8px;}}
-/* sidebar styling */
-[data-testid="stSidebar"]{{background-color:#1e293b!important;}}
-[data-testid="stSidebar"] label,
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] .stMarkdown p,
-[data-testid="stSidebar"] span{{color:#ffffff!important;}}
-[data-testid="stSidebar"] .stSlider label,
-[data-testid="stSidebar"] .stSlider span{{color:#ffffff!important;}}
-[data-testid="stSidebar"] input{{background-color:#334155!important;color:#ffffff!important;border:2px solid #2563eb!important;border-radius:10px!important;}}
-[data-testid="stSidebar"] div[data-baseweb="select"]>div{{background-color:#334155!important;border:2px solid #2563eb!important;border-radius:10px!important;}}
-[data-testid="stSidebar"] div[data-baseweb="select"] span,
-[data-testid="stSidebar"] div[data-baseweb="select"] div{{color:#ffffff!important;}}
+/* زر الإعدادات العائم */
+div[data-testid="stPopover"]>button{{
+    background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;
+    color:white!important;border:none!important;
+    box-shadow:0 6px 24px rgba(37,99,255,0.45)!important;
+    position:fixed!important;bottom:30px!important;right:30px!important;
+    z-index:9999!important;border-radius:14px!important;
+    padding:10px 18px!important;font-size:15px!important;
+    font-family:'Cairo',sans-serif!important;font-weight:700!important;
+}}
+div[data-testid="stPopover"]>button *{{color:white!important;}}
+div[data-testid="stPopoverBody"] label,div[data-testid="stPopoverBody"] p,
+div[data-testid="stPopoverBody"] h3,div[data-testid="stPopoverBody"] .stMarkdown p,
+div[data-testid="stPopoverBody"] .stSlider label,
+div[data-testid="stPopoverBody"] .stSlider span{{color:#ffffff!important;}}
+div[data-testid="stPopoverBody"] input{{background-color:#334155!important;color:#ffffff!important;
+    border:2px solid #2563eb!important;border-radius:10px!important;}}
+div[data-testid="stPopoverBody"] div[data-baseweb="select"]>div{{background-color:#334155!important;
+    border:2px solid #2563eb!important;border-radius:10px!important;}}
+div[data-testid="stPopoverBody"] div[data-baseweb="select"] span,
+div[data-testid="stPopoverBody"] div[data-baseweb="select"] div{{color:#ffffff!important;}}
 .platform-title{{text-align:center;color:#2563eb;font-family:'Cairo',sans-serif;font-size:42px;font-weight:900;margin-bottom:8px;}}
 .platform-subtitle{{text-align:center;color:{SUB};font-family:'Cairo',sans-serif;font-size:18px;margin-bottom:30px;}}
 hr{{border:none;border-top:2px solid {BORDER};margin:4px 0 20px;}}
@@ -232,7 +241,7 @@ cat_map    = {c["name"]: c["id"] for c in categories}
 # ══════════════════════════════════════════════════════
 # 7. Popover
 # ══════════════════════════════════════════════════════
-with st.sidebar:
+with st.popover("الإعدادات"):
     st.markdown("### ⚙️ اعدادات النطق")
     selected_voice_key = st.selectbox("اختر المعلم:", list(VOICES.keys()), key="v_sel")
     selected_speed     = st.slider("سرعة النطق:", -50, 0, -30, 5, key="s_sel")
