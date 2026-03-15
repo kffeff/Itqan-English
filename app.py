@@ -22,14 +22,33 @@ st.markdown(f"""<style>
 #MainMenu,footer,header,.stDeployButton{{display:none!important;visibility:hidden!important;}}
 .stApp{{background-color:{BG};font-family:'Cairo',sans-serif;}}
 
-/* Sidebar styling */
-[data-testid='stSidebar']{{
+/* ══ تحريك السايدبار لليمين ══ */
+[data-testid="stSidebar"]{{
     background:{CARD_BG}!important;
+    border-right:none!important;
     border-left:4px solid #2563eb!important;
+    right:0!important;
+    left:auto!important;
 }}
-[data-testid='stSidebar'] *{{
+[data-testid="stSidebar"] > div:first-child {{
+    background:{CARD_BG}!important;
+}}
+[data-testid="stSidebar"] * {{
     font-family:'Cairo',sans-serif!important;
     color:{TEXT}!important;
+}}
+/* تحريك زر فتح/اغلاق السايدبار لليمين */
+[data-testid="stSidebarCollapseButton"] {{
+    right:0!important;
+    left:auto!important;
+}}
+/* تحريك المحتوى الرئيسي */
+.stMainBlockContainer {{
+    margin-right: 0!important;
+    margin-left: 0!important;
+}}
+section[data-testid="stSidebarContent"] {{
+    direction: rtl!important;
 }}
 
 .card{{background:{CARD_BG};padding:32px 28px 24px;border-radius:22px;border-right:10px solid #2563eb;
@@ -228,7 +247,7 @@ cat_map    = {c["name"]: c["id"] for c in categories}
 
 
 # ══════════════════════════════════════════════════════
-# 7. Sidebar - الإعدادات
+# 7. Sidebar على اليمين
 # ══════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown("## ⚙️ الإعدادات")
