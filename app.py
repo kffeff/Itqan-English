@@ -19,8 +19,19 @@ INPUT_BG= "#334155" if DK else "#1e293b"
 
 st.markdown(f"""<style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-#MainMenu,footer,header,.stDeployButton,[data-testid='stSidebar'],[data-testid='stSidebarCollapseButton']{{display:none!important;visibility:hidden!important;}}
+#MainMenu,footer,header,.stDeployButton{{display:none!important;visibility:hidden!important;}}
 .stApp{{background-color:{BG};font-family:'Cairo',sans-serif;}}
+
+/* Sidebar styling */
+[data-testid='stSidebar']{{
+    background:{CARD_BG}!important;
+    border-left:4px solid #2563eb!important;
+}}
+[data-testid='stSidebar'] *{{
+    font-family:'Cairo',sans-serif!important;
+    color:{TEXT}!important;
+}}
+
 .card{{background:{CARD_BG};padding:32px 28px 24px;border-radius:22px;border-right:10px solid #2563eb;
     margin-bottom:10px;box-shadow:0 8px 32px rgba(37,99,235,0.12);text-align:center;width:100%;
     transition:transform 0.18s ease,box-shadow 0.18s ease;}}
@@ -72,30 +83,6 @@ st.markdown(f"""<style>
 .repeat-badge{{background:linear-gradient(135deg,#f59e0b,#d97706);color:white;
     border-radius:99px;padding:4px 14px;font-size:14px;font-weight:700;
     font-family:'Cairo',sans-serif;display:inline-block;margin-bottom:8px;}}
-/* القائمة الجانبية */
-div[data-testid="stPopover"]>button{{
-    border-radius:50%!important;width:56px!important;height:56px!important;
-    font-size:22px!important;
-    background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;
-    color:white!important;border:none!important;
-    box-shadow:0 6px 24px rgba(37,99,255,0.45)!important;
-    position:fixed!important;bottom:30px!important;right:30px!important;z-index:9999!important;
-    overflow:hidden!important;
-}}
-div[data-testid="stPopover"]>button>*:not(svg){{
-    font-size:0!important;width:0!important;height:0!important;
-    overflow:hidden!important;position:absolute!important;
-}}
-div[data-testid="stPopoverBody"] label,div[data-testid="stPopoverBody"] p,
-div[data-testid="stPopoverBody"] h3,div[data-testid="stPopoverBody"] .stMarkdown p,
-div[data-testid="stPopoverBody"] .stSlider label,
-div[data-testid="stPopoverBody"] .stSlider span{{color:#ffffff!important;}}
-div[data-testid="stPopoverBody"] input{{background-color:#334155!important;color:#ffffff!important;
-    border:2px solid #2563eb!important;border-radius:10px!important;}}
-div[data-testid="stPopoverBody"] div[data-baseweb="select"]>div{{background-color:#334155!important;
-    border:2px solid #2563eb!important;border-radius:10px!important;}}
-div[data-testid="stPopoverBody"] div[data-baseweb="select"] span,
-div[data-testid="stPopoverBody"] div[data-baseweb="select"] div{{color:#ffffff!important;}}
 .platform-title{{text-align:center;color:#2563eb;font-family:'Cairo',sans-serif;font-size:42px;font-weight:900;margin-bottom:8px;}}
 .platform-subtitle{{text-align:center;color:{SUB};font-family:'Cairo',sans-serif;font-size:18px;margin-bottom:30px;}}
 hr{{border:none;border-top:2px solid {BORDER};margin:4px 0 20px;}}
@@ -115,7 +102,6 @@ div[data-baseweb="select"] span,div[data-baseweb="select"] div{{color:#ffffff!im
 ul[data-baseweb="menu"]{{background-color:{INPUT_BG}!important;}}
 ul[data-baseweb="menu"] li{{color:#ffffff!important;}}
 ul[data-baseweb="menu"] li:hover{{background-color:#2563eb!important;}}
-
 </style>""", unsafe_allow_html=True)
 
 
@@ -242,12 +228,13 @@ cat_map    = {c["name"]: c["id"] for c in categories}
 
 
 # ══════════════════════════════════════════════════════
-# 7. Popover
+# 7. Sidebar - الإعدادات
 # ══════════════════════════════════════════════════════
-with st.popover("⚙"):
-    st.markdown("### ⚙️ اعدادات النطق")
-    selected_voice_key = st.selectbox("اختر المعلم:", list(VOICES.keys()), key="v_sel")
-    selected_speed     = st.slider("سرعة النطق:", -50, 0, -30, 5, key="s_sel")
+with st.sidebar:
+    st.markdown("## ⚙️ الإعدادات")
+    st.divider()
+    selected_voice_key = st.selectbox("🎙️ اختر المعلم:", list(VOICES.keys()), key="v_sel")
+    selected_speed     = st.slider("⚡ سرعة النطق:", -50, 0, -30, 5, key="s_sel")
     st.divider()
     search_q = st.text_input("🔍 بحث سريع:", key="search_q")
     st.divider()
@@ -261,7 +248,6 @@ with st.popover("⚙"):
 st.markdown("<div class='platform-title'>🎓 منصة اتقان اللغة الانجليزية</div>"
             "<div class='platform-subtitle'>تعلم الكلمات والجمل بنطق صحيح واضح</div>",
             unsafe_allow_html=True)
-
 
 
 # ══════════════════════════════════════════════════════
@@ -342,7 +328,6 @@ else:
         else:
             v_id = VOICES[selected_voice_key]
 
-            # أزرار الأوضاع
             st.markdown("**اختر وضع التعلم:**")
             r1c1,r1c2,r1c3,r1c4 = st.columns(4)
             r2c1,r2c2,r2c3,_    = st.columns(4)
