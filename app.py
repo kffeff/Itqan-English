@@ -1,6 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
-import os, asyncio, edge_tts, base64, hashlib, random, time
+import os, asyncio, edge_tts, base64, hashlib, random, time, requests, json
 from supabase import create_client, Client
 
 st.set_page_config(page_title="منصة إتقان اللغة الإنجليزية", layout="wide", page_icon="🎓")
@@ -185,7 +185,6 @@ st.markdown("<div class='platform-title'>🎓 منصة اتقان اللغة ا�
 
 # ══ ADMIN ══
 if is_admin:
-    # ── كلمة السر ──
     if not st.session_state.admin_auth:
         st.markdown("<div class='login-box'>", unsafe_allow_html=True)
         st.markdown("### 🔐 لوحة الادارة")
@@ -199,7 +198,6 @@ if is_admin:
         st.markdown("</div>", unsafe_allow_html=True)
         st.stop()
 
-    # ── لوحة الادارة الكاملة ──
     col_title, col_logout = st.columns([8, 1])
     with col_title:
         st.title("🛠 لوحة الادارة الكاملة")
@@ -246,7 +244,6 @@ if is_admin:
                         delete_word(item["id"]); st.cache_data.clear(); st.rerun()
             else: st.info("هذا القسم فارغ.")
         else: st.info("لا توجد اقسام بعد.")
-
     with tab3:
         st.subheader("🔁 كشف وحذف الجمل المكررة")
         if categories:
@@ -264,7 +261,6 @@ if is_admin:
                         else:
                             seen[key] = w
                 st.session_state["dups"] = all_dups
-
             if "dups" in st.session_state:
                 dups = st.session_state["dups"]
                 if not dups:
@@ -276,284 +272,457 @@ if is_admin:
                         c1, c2 = st.columns([5, 1])
                         c1.write(f"**{d['item']['en']}** — {d['item']['ar']} | قسم: *{d['cat']}*")
                         if c2.button("🗑", key=f"del_dup_{d['item']['id']}"):
-                            delete_word(d["item"]["id"])
-                            st.cache_data.clear()
+                            delete_word(d["item"]["id"]); st.cache_data.clear()
                             st.session_state["dups"] = [x for x in dups if x["item"]["id"] != d["item"]["id"]]
                             st.rerun()
                     st.divider()
                     if st.button("🔥 حذف كل المكررات دفعة واحدة", type="primary", use_container_width=True):
                         for d in dups:
                             delete_word(d["item"]["id"])
-                        st.cache_data.clear()
-                        del st.session_state["dups"]
+                        st.cache_data.clear(); del st.session_state["dups"]
                         st.success("✅ تم حذف جميع المكررات!"); st.rerun()
-        else:
-            st.info("لا توجد اقسام بعد.")
+        else: st.info("لا توجد اقسام بعد.")
 
 # ══ STUDENT VIEW ══
 else:
     if not categories:
         st.info("مرحبا بك! يرجى اضافة اقسام من لوحة الادارة اولا.")
     else:
-        choice = st.selectbox("📂 اختر القسم الذي يناسبك:", cat_names)
+        main_tab1, main_tab2, main_tab3 = st.tabs(["📚 التعلم", "📷 تعرف على الأشياء", "💬 محادثة مع AI"])
 
-        with st.expander("⚙️ الإعدادات", expanded=False):
-            col1, col2, col3 = st.columns([2, 2, 1])
-            with col1:
-                selected_voice_key = st.selectbox("🎙️ اختر المعلم:", list(VOICES.keys()), key="v_sel")
-            with col2:
-                search_q = st.text_input("🔍 بحث سريع:", key="search_q")
-            with col3:
-                selected_speed = st.slider("⚡ سرعة النطق:", -50, 0, -30, 5, key="s_sel")
-                if st.button("🌙" if not DK else "☀️", use_container_width=True):
-                    st.session_state.dark_mode = not st.session_state.dark_mode; st.rerun()
+        # ══ تبويب المحادثة ══
+        with main_tab3:
+            st.markdown(f"""
+            <div style='text-align:center;padding:20px 0 10px;'>
+                <div style='font-size:36px;font-weight:900;color:#2563eb;font-family:Cairo,sans-serif;'>💬 محادثة مع AI</div>
+                <div style='font-size:18px;color:{SUB};font-family:Cairo,sans-serif;margin-top:8px;'>
+                تحدث بالإنجليزي والـ AI يصحح ويعلمك 🤖</div>
+            </div>""", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
 
-        @st.cache_data(ttl=60)
-        def cached_words(cat_id):
-            return get_words(cat_id)
-        items = cached_words(cat_map[choice])
+            if "chat_history" not in st.session_state:
+                st.session_state.chat_history = []
 
-        if "search_q" in st.session_state and st.session_state.search_q:
-            q = st.session_state.search_q.lower()
-            items = [it for it in items if q in it["en"].lower() or q in it["ar"] or q in it["pron"]]
-
-        if not items:
-            st.warning("لا توجد نتائج.")
-        else:
-            v_id = VOICES[selected_voice_key]
-            st.markdown("**اختر وضع التعلم:**")
-            r1c1,r1c2,r1c3,r1c4 = st.columns(4)
-            r2c1,r2c2,r2c3,_    = st.columns(4)
-
-            def start_quiz(mode):
-                shuffled = items.copy(); random.shuffle(shuffled)
-                st.session_state.update({
-                    "quiz_active":True,"quiz_mode":mode,"quiz_items":shuffled,
-                    "quiz_idx":0,"quiz_score":0,"quiz_answered":False,
-                    "quiz_user_ans":"","quiz_show_ans":False,"quiz_results":[],
-                    "mcq_choices":[],"mcq_selected":None,"smart_wrong":[],"smart_round":1,
-                    "timer_start":time.time(),"timer_expired":False,
-                }); st.rerun()
-
-            def mode_btn(col, label, mode_name):
-                active = st.session_state.quiz_active and st.session_state.quiz_mode==mode_name
-                with col:
-                    return st.button(label, use_container_width=True, type="primary" if active else "secondary")
-
-            if r1c1.button("📖 دراسة", use_container_width=True,
-                           type="primary" if not st.session_state.quiz_active else "secondary"):
-                st.session_state.quiz_active = False; st.rerun()
-            if mode_btn(r1c2,"📝 اختبار","normal"): start_quiz("normal")
-            if mode_btn(r1c3,"🔊 استماع","listen"): start_quiz("listen")
-            if mode_btn(r1c4,"⏱️ مؤقت","timer"): start_quiz("timer")
-            if mode_btn(r2c1,"🎯 اختيار متعدد","mcq"): start_quiz("mcq")
-            if mode_btn(r2c2,"🔤 اختبار عكسي","reverse"): start_quiz("reverse")
-            if mode_btn(r2c3,"🔁 تكرار ذكي","smart"): start_quiz("smart")
-
-            st.markdown("<hr>", unsafe_allow_html=True)
-
-            if not st.session_state.quiz_active:
-                if st.button("🖨️ طباعة القسم كـ PDF", use_container_width=False):
-                    cards_html = "".join(
-                        f"<div class='print-card'><div class='print-en'>{it['en']}</div>"
-                        f"<div class='print-ar'>{it['ar']}</div><div class='print-pron'>{it['pron']}</div></div>"
-                        for it in items)
-                    pdf_html = f"""<html dir='rtl'><head><meta charset='utf-8'><style>
-                    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-                    body{{font-family:'Cairo',sans-serif;padding:20px;direction:rtl;}}
-                    h1{{text-align:center;color:#2563eb;font-size:28px;margin-bottom:8px;}}
-                    h2{{text-align:center;color:#64748b;font-size:16px;margin-bottom:24px;font-weight:400;}}
-                    .print-card{{border:2px solid #2563eb;border-radius:12px;padding:20px;margin-bottom:16px;page-break-inside:avoid;text-align:center;}}
-                    .print-en{{font-size:28px;font-weight:900;color:#1e293b;}}
-                    .print-ar{{font-size:20px;color:#059669;font-weight:700;margin-top:6px;}}
-                    .print-pron{{font-size:22px;color:#e11d48;font-weight:900;border:2px dashed #f43f5e;border-radius:8px;padding:8px;margin-top:10px;}}
-                    @media print{{@page{{margin:15mm;}}}}
-                    </style></head><body>
-                    <h1>🎓 منصة اتقان اللغة الانجليزية</h1>
-                    <h2>قسم: {choice} — عدد الكلمات: {len(items)}</h2>
-                    {cards_html}
-                    <script>window.onload=function(){{window.print();}}</script>
-                    </body></html>"""
-                    b64p = base64.b64encode(pdf_html.encode("utf-8")).decode()
-                    components.html(
-                        f'<iframe src="data:text/html;base64,{b64p}" style="display:none" id="pf"></iframe>'
-                        f'<script>document.getElementById("pf").onload=function(){{this.contentWindow.print();}}</script>',
-                        height=0)
-
-                st.markdown("<br>", unsafe_allow_html=True)
-                for item in items:
-                    st.markdown(
-                        f"<div class='card'><div class='en-text'>{item['en']}</div>"
-                        f"<div class='ar-text'>{item['ar']}</div>"
-                        f"<div class='pron-box'>{item['pron']}</div></div>",
-                        unsafe_allow_html=True)
-                    render_audio(ensure_audio(item["en"], v_id, selected_speed))
-                    st.markdown("<hr>", unsafe_allow_html=True)
-            else:
-                mode = st.session_state.quiz_mode
-                if mode == "smart":
-                    quiz_items = st.session_state.quiz_items if st.session_state.smart_round==1 else st.session_state.smart_wrong
-                    if not quiz_items and st.session_state.smart_round > 1:
-                        st.balloons()
-                        st.success(f"🏆 أحسنت! أتقنت جميع الكلمات بعد {st.session_state.smart_round-1} جولة!")
-                        if st.button("🔄 ابدأ من جديد", type="primary", use_container_width=True): start_quiz("smart")
-                        st.stop()
+            # عرض المحادثة
+            for msg in st.session_state.chat_history:
+                if msg["role"] == "user":
+                    st.markdown(f"""<div style='background:linear-gradient(135deg,#2563eb,#1d4ed8);
+                        border-radius:18px 18px 4px 18px;padding:14px 20px;margin:8px 0 8px auto;
+                        max-width:75%;text-align:right;color:white;font-family:Cairo,sans-serif;
+                        font-size:18px;font-weight:600;'>{msg["content"]}</div>""", unsafe_allow_html=True)
                 else:
-                    quiz_items = st.session_state.quiz_items
+                    st.markdown(f"""<div style='background:{CARD_BG};border:2px solid {BORDER};
+                        border-radius:18px 18px 18px 4px;padding:14px 20px;margin:8px auto 8px 0;
+                        max-width:80%;text-align:right;color:{TEXT};font-family:Cairo,sans-serif;
+                        font-size:17px;direction:rtl;'>{msg["content"]}</div>""", unsafe_allow_html=True)
 
-                idx   = st.session_state.quiz_idx
-                total = len(quiz_items)
+            st.markdown("<br>", unsafe_allow_html=True)
 
-                def show_results():
-                    score = st.session_state.quiz_score
-                    pct   = int(score/total*100) if total else 0
-                    msg, color = (
-                        ("🏆 ممتاز! كل الاجابات صحيحة!","#10b981") if pct==100 else
-                        ("👍 جيد جداً! استمر","#f59e0b") if pct>=70 else
-                        ("💪 راجع الكلمات وحاول مجدداً","#ef4444"))
-                    st.markdown(f"""<div class='quiz-score'>
-                        <div style='font-size:32px;font-weight:900;margin-bottom:16px;'>نتيجة الاختبار</div>
-                        <div class='score-number'>{score}/{total}</div>
-                        <div class='score-label'>اجبت صحيح على {score} من {total}</div>
-                        <div class='score-msg' style='color:{color}'>{msg}</div>
-                        <div style='margin-top:24px;background:#1e293b;border-radius:99px;height:16px;'>
-                        <div style='background:linear-gradient(90deg,#7c3aed,#2563eb);height:16px;border-radius:99px;width:{pct}%;'></div></div>
-                        <div style='color:#94a3b8;margin-top:8px;font-size:20px;'>{pct}%</div>
-                    </div>""", unsafe_allow_html=True)
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    with st.expander("📋 مراجعة اجاباتك"):
-                        for r in st.session_state.quiz_results:
-                            st.markdown(f"{'✅' if r['correct'] else '❌'} **{r['en']}**  \nاجابتك: *{r['user']}*  \nالصحيحة: *{r['ar']}*")
-                            st.divider()
-                    if mode=="smart" and st.session_state.smart_wrong:
-                        wc = len(st.session_state.smart_wrong)
-                        st.warning(f"🔁 يوجد {wc} كلمة خاطئة — سيتم تكرارها")
-                        if st.button(f"▶️ ابدأ جولة التكرار ({wc} كلمة)", type="primary", use_container_width=True):
-                            nw = st.session_state.smart_wrong.copy(); random.shuffle(nw)
-                            st.session_state.update({"quiz_items":nw,"quiz_idx":0,"quiz_score":0,
-                                "quiz_answered":False,"quiz_user_ans":"","quiz_show_ans":False,
-                                "quiz_results":[],"smart_wrong":[],"smart_round":st.session_state.smart_round+1,
-                                "mcq_choices":[],"mcq_selected":None}); st.rerun()
-                    else:
-                        if st.button("🔄 اعادة الاختبار", type="primary", use_container_width=True): start_quiz(mode)
+            # حقل الإدخال
+            user_input = st.text_input("اكتب رسالتك هنا:", placeholder="اكتب بالعربي أو الإنجليزي...", key="chat_input", label_visibility="collapsed")
+            c1, c2 = st.columns([4, 1])
+            with c1:
+                send = st.button("📤 إرسال", type="primary", use_container_width=True)
+            with c2:
+                if st.button("🗑️ مسح", use_container_width=True):
+                    st.session_state.chat_history = []; st.rerun()
 
-                if idx >= total:
-                    show_results(); st.stop()
-
-                item    = quiz_items[idx]
-                pct_now = int(idx/total*100)
-                round_label = f" — الجولة {st.session_state.smart_round}" if mode=="smart" else ""
-
-                st.markdown(f"""<div class='q-counter'>السؤال {idx+1} من {total}{round_label}</div>
-                <div class='progress-bar-wrap'><div class='progress-bar-fill' style='width:{pct_now}%'></div></div>""",
-                unsafe_allow_html=True)
-
-                if mode=="timer" and not st.session_state.quiz_answered:
-                    remaining = max(0, 30-int(time.time()-st.session_state.timer_start))
-                    warn = "timer-warn" if remaining<=10 else ""
-                    st.markdown(f"<div class='timer-box {warn}'>⏱️ {remaining} ثانية</div>", unsafe_allow_html=True)
-                    if remaining==0:
-                        st.session_state.quiz_answered=True; st.session_state.quiz_show_ans=True
-                        st.session_state.timer_expired=True; st.rerun()
-
-                if mode=="listen":
-                    st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>🔊 استمع واكتب الترجمة العربية</div>"
-                        f"<div style='font-size:60px;margin:20px 0;'>👂</div>"
-                        f"<div class='quiz-hint' style='color:#7c3aed;'>اضغط تشغيل واستمع</div></div>", unsafe_allow_html=True)
-                elif mode=="reverse":
-                    st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>🔤 اكتب هذه الكلمة/الجملة بالإنجليزية</div>"
-                        f"<div class='quiz-ar'>{item['ar']}</div>"
-                        f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
-                elif mode=="mcq":
-                    st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>🎯 اختر الترجمة الصحيحة</div>"
-                        f"<div class='quiz-en'>{item['en']}</div>"
-                        f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
-                elif mode=="smart":
-                    st.markdown(f"<div class='repeat-badge'>🔁 تكرار ذكي — الجولة {st.session_state.smart_round}</div>", unsafe_allow_html=True)
-                    st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>💡 ما معنى هذه الكلمة/الجملة بالعربية؟</div>"
-                        f"<div class='quiz-en'>{item['en']}</div>"
-                        f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
-                else:
-                    st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>💡 ما معنى هذه الكلمة/الجملة بالعربية؟</div>"
-                        f"<div class='quiz-en'>{item['en']}</div>"
-                        f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
-
-                render_audio(ensure_audio(item["en"], v_id, selected_speed))
-                st.markdown("<br>", unsafe_allow_html=True)
-
-                if mode=="mcq":
-                    if not st.session_state.mcq_choices:
-                        st.session_state.mcq_choices = make_mcq_choices(items, item)
-                    choices    = st.session_state.mcq_choices
-                    correct_ar = item["ar"]
-                    if not st.session_state.quiz_answered:
-                        for i, ch in enumerate(choices):
-                            if st.button(ch, key=f"mcq_{idx}_{i}", use_container_width=True):
-                                st.session_state.quiz_answered=True; st.session_state.mcq_selected=ch; st.rerun()
-                    else:
-                        selected   = st.session_state.mcq_selected
-                        is_correct = selected and normalize(selected)==normalize(correct_ar)
-                        for ch in choices:
-                            if normalize(ch)==normalize(correct_ar):
-                                st.markdown(f"<div class='mcq-opt mcq-opt-correct'>✅ {ch}</div>", unsafe_allow_html=True)
-                            elif ch==selected and not is_correct:
-                                st.markdown(f"<div class='mcq-opt mcq-opt-wrong'>❌ {ch}</div>", unsafe_allow_html=True)
-                            else:
-                                st.markdown(f"<div class='mcq-opt mcq-opt-neutral'>{ch}</div>", unsafe_allow_html=True)
-                        st.markdown("<br>", unsafe_allow_html=True)
-                        if is_correct: st.session_state.quiz_score+=1; st.success("🎉 اجابة صحيحة!")
-                        else: st.error(f"الصحيحة: {correct_ar}")
-                        if mode=="smart" and not is_correct: st.session_state.smart_wrong.append(item)
-                        st.session_state.quiz_results.append({"en":item["en"],"ar":correct_ar,"user":selected or "—","correct":bool(is_correct)})
-                        st.markdown("<br>", unsafe_allow_html=True)
-                        lbl = "➡️ التالي" if idx+1<total else "🏁 النتيجة"
-                        if st.button(lbl, type="primary", use_container_width=True):
-                            st.session_state.update({"quiz_idx":idx+1,"quiz_answered":False,
-                                "mcq_choices":[],"mcq_selected":None,
-                                "timer_start":time.time(),"timer_expired":False}); st.rerun()
-                else:
-                    if not st.session_state.quiz_answered:
-                        ph  = "اكتب الكلمة/الجملة بالإنجليزية..." if mode=="reverse" else "اكتب اجابتك هنا..."
-                        lbl = "✏️ اكتب الكلمة/الجملة بالإنجليزية:" if mode=="reverse" else "✏️ اكتب الترجمة العربية:"
-                        user_ans = st.text_input(lbl, key=f"ans_{idx}_{mode}", placeholder=ph)
-                        ca, cb = st.columns(2)
-                        with ca:
-                            if st.button("✅ تحقق", type="primary", use_container_width=True):
-                                if user_ans.strip():
-                                    st.session_state.quiz_answered=True; st.session_state.quiz_user_ans=user_ans.strip(); st.rerun()
-                                else: st.warning("اكتب اجابتك اولاً!")
-                        with cb:
-                            if st.button("👁 اظهر الاجابة", use_container_width=True):
-                                st.session_state.quiz_answered=True; st.session_state.quiz_show_ans=True
-                                st.session_state.quiz_user_ans=""; st.rerun()
-                        if mode=="timer": time.sleep(1); st.rerun()
-                    else:
-                        correct    = item["en"] if mode=="reverse" else item["ar"]
-                        user_ans   = st.session_state.quiz_user_ans
-                        show_only  = st.session_state.quiz_show_ans
-                        if st.session_state.timer_expired: st.error("⏰ انتهى الوقت!")
-                        if show_only:
-                            st.markdown(f"<div class='quiz-reveal'>"
-                                f"<div style='font-size:20px;color:#5b21b6;font-weight:700;margin-bottom:8px;'>الاجابة الصحيحة:</div>"
-                                f"<div style='font-size:32px;font-weight:900;color:#4c1d95;'>{correct}</div>"
-                                f"<div style='font-size:18px;color:#6d28d9;margin-top:8px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
-                            st.session_state.quiz_results.append({"en":item["en"],"ar":item["ar"],"user":"—","correct":False})
-                            if mode=="smart": st.session_state.smart_wrong.append(item)
+            if send and user_input.strip():
+                st.session_state.chat_history.append({"role": "user", "content": user_input.strip()})
+                with st.spinner("🤖 AI يفكر..."):
+                    try:
+                        groq_key = st.secrets["GROQ_API_KEY"]
+                        history_text = "\n".join([f"{'المستخدم' if m['role']=='user' else 'AI'}: {m['content']}" for m in st.session_state.chat_history[-10:]])
+                        payload = {
+                            "model": "llama-3.3-70b-versatile",
+                            "messages": [
+                                {
+                                    "role": "system",
+                                    "content": """أنت مساعد تعليمي لتعلم اللغة الإنجليزية. مهمتك:
+1. إذا كتب المستخدم بالإنجليزي: صحح أخطاءه وعلمه
+2. إذا كتب بالعربي: ترجم له وعلمه الكلمات
+3. أجب دائماً بالعربي مع أمثلة إنجليزية
+4. كن مشجعاً وودوداً
+5. أجب بشكل قصير ومفيد"""
+                                },
+                                {"role": "user", "content": user_input.strip()}
+                            ],
+                            "max_tokens": 500
+                        }
+                        res = requests.post(
+                            "https://api.groq.com/openai/v1/chat/completions",
+                            headers={
+                                "Content-Type": "application/json",
+                                "Authorization": f"Bearer {groq_key}"
+                            },
+                            json=payload, timeout=30)
+                        res_json = res.json()
+                        if "error" in res_json:
+                            reply = f"خطأ: {res_json['error']['message']}"
                         else:
-                            is_correct = normalize(user_ans)==normalize(correct)
-                            if is_correct:
-                                st.session_state.quiz_score+=1
-                                st.markdown(f"<div class='quiz-correct'>✅ اجابة صحيحة! 🎉<br><span style='font-size:24px;'>{correct}</span></div>", unsafe_allow_html=True)
-                            else:
-                                st.markdown(f"<div class='quiz-wrong'>❌ اجابة خاطئة<br>"
-                                    f"<span style='font-size:18px;'>اجابتك: {user_ans}</span><br>"
-                                    f"<span style='font-size:22px;color:#991b1b;'>✔ الصحيحة: {correct}</span><br>"
-                                    f"<span style='font-size:18px;color:#7f1d1d;'>النطق: {item['pron']}</span></div>", unsafe_allow_html=True)
-                                if mode=="smart": st.session_state.smart_wrong.append(item)
-                            st.session_state.quiz_results.append({"en":item["en"],"ar":item["ar"],"user":user_ans,"correct":is_correct})
+                            reply = res_json["choices"][0]["message"]["content"]
+                        st.session_state.chat_history.append({"role": "ai", "content": reply})
+                    except Exception as e:
+                        st.session_state.chat_history.append({"role": "ai", "content": f"حدث خطأ: {e}"})
+                st.rerun()
+
+        # ══ تبويب الذكاء الاصطناعي ══
+        with main_tab2:
+            st.markdown(f"""
+            <div style='text-align:center;padding:20px 0 10px;'>
+                <div style='font-size:36px;font-weight:900;color:#2563eb;font-family:Cairo,sans-serif;'>📷 تعرف على أي شيء!</div>
+                <div style='font-size:18px;color:{SUB};font-family:Cairo,sans-serif;margin-top:8px;'>
+                صوّر أي شيء من حولك وسأخبرك باسمه بالإنجليزي 🤖</div>
+            </div>""", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            uploaded = st.file_uploader("ارفع صورة:", type=["jpg","jpeg","png","webp"], label_visibility="visible")
+
+            if uploaded:
+                img_bytes = uploaded.read()
+                img_b64 = base64.b64encode(img_bytes).decode()
+                img_type = uploaded.type
+                col_img, col_btn = st.columns([2, 1])
+                with col_img:
+                    st.image(uploaded, use_container_width=True)
+                with col_btn:
+                    st.markdown("<br><br>", unsafe_allow_html=True)
+                    if st.button("🔍 تعرف على هذا الشيء!", type="primary", use_container_width=True):
+                        with st.spinner("🤖 الذكاء الاصطناعي يحلل الصورة..."):
+                            payload = {
+                                "model": "claude-sonnet-4-6",
+                                "max_tokens": 500,
+                                "messages": [{
+                                    "role": "user",
+                                    "content": [
+                                        {
+                                            "type": "image",
+                                            "source": {
+                                                "type": "base64",
+                                                "media_type": img_type,
+                                                "data": img_b64
+                                            }
+                                        },
+                                        {
+                                            "type": "text",
+                                            "text": """انظر لهذه الصورة وحدد أبرز شيء فيها.
+أجب فقط بهذا JSON بدون أي نص إضافي أو backticks:
+{
+  "en": "اسم الشيء بالإنجليزي",
+  "ar": "اسم الشيء بالعربي",
+  "pron": "النطق بالحروف العربية",
+  "desc_ar": "جملة واحدة تصف الشيء بالعربي",
+  "example": "جملة مثال قصيرة بالإنجليزي تستخدم الكلمة"
+}"""
+                                        }
+                                    ]
+                                }]
+                            }
+                            try:
+                                res = requests.post(
+                                    "https://api.anthropic.com/v1/messages",
+                                    headers={
+                                        "Content-Type": "application/json",
+                                        "anthropic-version": "2023-06-01",
+                                        "x-api-key": st.secrets["ANTHROPIC_API_KEY"]
+                                    },
+                                    json=payload, timeout=30)
+                                resp_json = res.json()
+                                if "error" in resp_json:
+                                    st.error(f"خطأ من API: {resp_json['error']['message']}")
+                                    st.stop()
+                                raw = resp_json["content"][0]["text"].strip()
+                                raw = raw.replace("```json","").replace("```","").strip()
+                                st.session_state["vision_result"] = json.loads(raw)
+                            except Exception as e:
+                                st.error(f"حدث خطأ: {e}")
+
+            if "vision_result" in st.session_state:
+                d = st.session_state["vision_result"]
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown(f"""
+                <div style='background:{CARD_BG};border-radius:24px;padding:36px 28px;
+                    border-top:8px solid #2563eb;box-shadow:0 10px 40px rgba(37,99,235,0.2);
+                    text-align:center;'>
+                    <div style='font-size:56px;font-weight:900;color:{TEXT};margin-bottom:10px;letter-spacing:2px;'>{d.get("en","")}</div>
+                    <div style='font-size:32px;font-weight:700;color:#059669;font-family:Cairo,sans-serif;margin-bottom:16px;'>{d.get("ar","")}</div>
+                    <div style='background:linear-gradient(135deg,#fff1f2,#ffe4e6);border:3px dashed #f43f5e;
+                        border-radius:14px;padding:14px 24px;display:inline-block;margin-bottom:20px;'>
+                        <span style='font-size:34px;font-weight:900;color:#e11d48;font-family:Cairo,sans-serif;'>{d.get("pron","")}</span>
+                    </div>
+                    <div style='font-size:18px;color:{SUB};font-family:Cairo,sans-serif;margin-bottom:14px;'>{d.get("desc_ar","")}</div>
+                    <div style='background:linear-gradient(135deg,#ede9fe,#ddd6fe);border-radius:14px;
+                        padding:14px 24px;font-size:20px;color:#4c1d95;font-style:italic;'>
+                        💬 {d.get("example","")}
+                    </div>
+                </div>""", unsafe_allow_html=True)
+                st.markdown("<br>", unsafe_allow_html=True)
+                audio_path = ensure_audio(d.get("en",""), "en-US-AndrewMultilingualNeural", -30)
+                render_audio(audio_path)
+                if st.button("🔄 صورة جديدة", use_container_width=True):
+                    del st.session_state["vision_result"]; st.rerun()
+
+        # ══ تبويب التعلم ══
+        with main_tab1:
+            choice = st.selectbox("📂 اختر القسم الذي يناسبك:", cat_names)
+
+            with st.expander("⚙️ الإعدادات", expanded=False):
+                col1, col2, col3 = st.columns([2, 2, 1])
+                with col1:
+                    selected_voice_key = st.selectbox("🎙️ اختر المعلم:", list(VOICES.keys()), key="v_sel")
+                with col2:
+                    search_q = st.text_input("🔍 بحث سريع:", key="search_q")
+                with col3:
+                    selected_speed = st.slider("⚡ سرعة النطق:", -50, 0, -30, 5, key="s_sel")
+                    if st.button("🌙" if not DK else "☀️", use_container_width=True):
+                        st.session_state.dark_mode = not st.session_state.dark_mode; st.rerun()
+
+            @st.cache_data(ttl=60)
+            def cached_words(cat_id):
+                return get_words(cat_id)
+            items = cached_words(cat_map[choice])
+
+            if "search_q" in st.session_state and st.session_state.search_q:
+                q = st.session_state.search_q.lower()
+                items = [it for it in items if q in it["en"].lower() or q in it["ar"] or q in it["pron"]]
+
+            if not items:
+                st.warning("لا توجد نتائج.")
+            else:
+                v_id = VOICES[selected_voice_key]
+                st.markdown("**اختر وضع التعلم:**")
+                r1c1,r1c2,r1c3,r1c4 = st.columns(4)
+                r2c1,r2c2,r2c3,_    = st.columns(4)
+
+                def start_quiz(mode):
+                    shuffled = items.copy(); random.shuffle(shuffled)
+                    st.session_state.update({
+                        "quiz_active":True,"quiz_mode":mode,"quiz_items":shuffled,
+                        "quiz_idx":0,"quiz_score":0,"quiz_answered":False,
+                        "quiz_user_ans":"","quiz_show_ans":False,"quiz_results":[],
+                        "mcq_choices":[],"mcq_selected":None,"smart_wrong":[],"smart_round":1,
+                        "timer_start":time.time(),"timer_expired":False,
+                    }); st.rerun()
+
+                def mode_btn(col, label, mode_name):
+                    active = st.session_state.quiz_active and st.session_state.quiz_mode==mode_name
+                    with col:
+                        return st.button(label, use_container_width=True, type="primary" if active else "secondary")
+
+                if r1c1.button("📖 دراسة", use_container_width=True,
+                               type="primary" if not st.session_state.quiz_active else "secondary"):
+                    st.session_state.quiz_active = False; st.rerun()
+                if mode_btn(r1c2,"📝 اختبار","normal"): start_quiz("normal")
+                if mode_btn(r1c3,"🔊 استماع","listen"): start_quiz("listen")
+                if mode_btn(r1c4,"⏱️ مؤقت","timer"): start_quiz("timer")
+                if mode_btn(r2c1,"🎯 اختيار متعدد","mcq"): start_quiz("mcq")
+                if mode_btn(r2c2,"🔤 اختبار عكسي","reverse"): start_quiz("reverse")
+                if mode_btn(r2c3,"🔁 تكرار ذكي","smart"): start_quiz("smart")
+
+                st.markdown("<hr>", unsafe_allow_html=True)
+
+                if not st.session_state.quiz_active:
+                    if st.button("🖨️ طباعة القسم كـ PDF", use_container_width=False):
+                        cards_html = "".join(
+                            f"<div class='print-card'><div class='print-en'>{it['en']}</div>"
+                            f"<div class='print-ar'>{it['ar']}</div><div class='print-pron'>{it['pron']}</div></div>"
+                            for it in items)
+                        pdf_html = f"""<html dir='rtl'><head><meta charset='utf-8'><style>
+                        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+                        body{{font-family:'Cairo',sans-serif;padding:20px;direction:rtl;}}
+                        h1{{text-align:center;color:#2563eb;font-size:28px;margin-bottom:8px;}}
+                        h2{{text-align:center;color:#64748b;font-size:16px;margin-bottom:24px;font-weight:400;}}
+                        .print-card{{border:2px solid #2563eb;border-radius:12px;padding:20px;margin-bottom:16px;page-break-inside:avoid;text-align:center;}}
+                        .print-en{{font-size:28px;font-weight:900;color:#1e293b;}}
+                        .print-ar{{font-size:20px;color:#059669;font-weight:700;margin-top:6px;}}
+                        .print-pron{{font-size:22px;color:#e11d48;font-weight:900;border:2px dashed #f43f5e;border-radius:8px;padding:8px;margin-top:10px;}}
+                        @media print{{@page{{margin:15mm;}}}}
+                        </style></head><body>
+                        <h1>🎓 منصة اتقان اللغة الانجليزية</h1>
+                        <h2>قسم: {choice} — عدد الكلمات: {len(items)}</h2>
+                        {cards_html}
+                        <script>window.onload=function(){{window.print();}}</script>
+                        </body></html>"""
+                        b64p = base64.b64encode(pdf_html.encode("utf-8")).decode()
+                        components.html(
+                            f'<iframe src="data:text/html;base64,{b64p}" style="display:none" id="pf"></iframe>'
+                            f'<script>document.getElementById("pf").onload=function(){{this.contentWindow.print();}}</script>',
+                            height=0)
+
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    for item in items:
+                        st.markdown(
+                            f"<div class='card'><div class='en-text'>{item['en']}</div>"
+                            f"<div class='ar-text'>{item['ar']}</div>"
+                            f"<div class='pron-box'>{item['pron']}</div></div>",
+                            unsafe_allow_html=True)
+                        render_audio(ensure_audio(item["en"], v_id, selected_speed))
+                        st.markdown("<hr>", unsafe_allow_html=True)
+                else:
+                    mode = st.session_state.quiz_mode
+                    if mode == "smart":
+                        quiz_items = st.session_state.quiz_items if st.session_state.smart_round==1 else st.session_state.smart_wrong
+                        if not quiz_items and st.session_state.smart_round > 1:
+                            st.balloons()
+                            st.success(f"🏆 أحسنت! أتقنت جميع الكلمات بعد {st.session_state.smart_round-1} جولة!")
+                            if st.button("🔄 ابدأ من جديد", type="primary", use_container_width=True): start_quiz("smart")
+                            st.stop()
+                    else:
+                        quiz_items = st.session_state.quiz_items
+
+                    idx   = st.session_state.quiz_idx
+                    total = len(quiz_items)
+
+                    def show_results():
+                        score = st.session_state.quiz_score
+                        pct   = int(score/total*100) if total else 0
+                        msg, color = (
+                            ("🏆 ممتاز! كل الاجابات صحيحة!","#10b981") if pct==100 else
+                            ("👍 جيد جداً! استمر","#f59e0b") if pct>=70 else
+                            ("💪 راجع الكلمات وحاول مجدداً","#ef4444"))
+                        st.markdown(f"""<div class='quiz-score'>
+                            <div style='font-size:32px;font-weight:900;margin-bottom:16px;'>نتيجة الاختبار</div>
+                            <div class='score-number'>{score}/{total}</div>
+                            <div class='score-label'>اجبت صحيح على {score} من {total}</div>
+                            <div class='score-msg' style='color:{color}'>{msg}</div>
+                            <div style='margin-top:24px;background:#1e293b;border-radius:99px;height:16px;'>
+                            <div style='background:linear-gradient(90deg,#7c3aed,#2563eb);height:16px;border-radius:99px;width:{pct}%;'></div></div>
+                            <div style='color:#94a3b8;margin-top:8px;font-size:20px;'>{pct}%</div>
+                        </div>""", unsafe_allow_html=True)
                         st.markdown("<br>", unsafe_allow_html=True)
-                        lbl = "➡️ التالي" if idx+1<total else "🏁 النتيجة"
-                        if st.button(lbl, type="primary", use_container_width=True):
-                            st.session_state.update({"quiz_idx":idx+1,"quiz_answered":False,
-                                "quiz_user_ans":"","quiz_show_ans":False,
-                                "timer_start":time.time(),"timer_expired":False}); st.rerun()
+                        with st.expander("📋 مراجعة اجاباتك"):
+                            for r in st.session_state.quiz_results:
+                                st.markdown(f"{'✅' if r['correct'] else '❌'} **{r['en']}**  \nاجابتك: *{r['user']}*  \nالصحيحة: *{r['ar']}*")
+                                st.divider()
+                        if mode=="smart" and st.session_state.smart_wrong:
+                            wc = len(st.session_state.smart_wrong)
+                            st.warning(f"🔁 يوجد {wc} كلمة خاطئة — سيتم تكرارها")
+                            if st.button(f"▶️ ابدأ جولة التكرار ({wc} كلمة)", type="primary", use_container_width=True):
+                                nw = st.session_state.smart_wrong.copy(); random.shuffle(nw)
+                                st.session_state.update({"quiz_items":nw,"quiz_idx":0,"quiz_score":0,
+                                    "quiz_answered":False,"quiz_user_ans":"","quiz_show_ans":False,
+                                    "quiz_results":[],"smart_wrong":[],"smart_round":st.session_state.smart_round+1,
+                                    "mcq_choices":[],"mcq_selected":None}); st.rerun()
+                        else:
+                            if st.button("🔄 اعادة الاختبار", type="primary", use_container_width=True): start_quiz(mode)
+
+                    if idx >= total:
+                        show_results(); st.stop()
+
+                    item    = quiz_items[idx]
+                    pct_now = int(idx/total*100)
+                    round_label = f" — الجولة {st.session_state.smart_round}" if mode=="smart" else ""
+
+                    st.markdown(f"""<div class='q-counter'>السؤال {idx+1} من {total}{round_label}</div>
+                    <div class='progress-bar-wrap'><div class='progress-bar-fill' style='width:{pct_now}%'></div></div>""",
+                    unsafe_allow_html=True)
+
+                    if mode=="timer" and not st.session_state.quiz_answered:
+                        remaining = max(0, 30-int(time.time()-st.session_state.timer_start))
+                        warn = "timer-warn" if remaining<=10 else ""
+                        st.markdown(f"<div class='timer-box {warn}'>⏱️ {remaining} ثانية</div>", unsafe_allow_html=True)
+                        if remaining==0:
+                            st.session_state.quiz_answered=True; st.session_state.quiz_show_ans=True
+                            st.session_state.timer_expired=True; st.rerun()
+
+                    if mode=="listen":
+                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>🔊 استمع واكتب الترجمة العربية</div>"
+                            f"<div style='font-size:60px;margin:20px 0;'>👂</div>"
+                            f"<div class='quiz-hint' style='color:#7c3aed;'>اضغط تشغيل واستمع</div></div>", unsafe_allow_html=True)
+                    elif mode=="reverse":
+                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>🔤 اكتب هذه الكلمة/الجملة بالإنجليزية</div>"
+                            f"<div class='quiz-ar'>{item['ar']}</div>"
+                            f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
+                    elif mode=="mcq":
+                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>🎯 اختر الترجمة الصحيحة</div>"
+                            f"<div class='quiz-en'>{item['en']}</div>"
+                            f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
+                    elif mode=="smart":
+                        st.markdown(f"<div class='repeat-badge'>🔁 تكرار ذكي — الجولة {st.session_state.smart_round}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>💡 ما معنى هذه الكلمة/الجملة بالعربية؟</div>"
+                            f"<div class='quiz-en'>{item['en']}</div>"
+                            f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>💡 ما معنى هذه الكلمة/الجملة بالعربية؟</div>"
+                            f"<div class='quiz-en'>{item['en']}</div>"
+                            f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
+
+                    render_audio(ensure_audio(item["en"], v_id, selected_speed))
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+                    if mode=="mcq":
+                        if not st.session_state.mcq_choices:
+                            st.session_state.mcq_choices = make_mcq_choices(items, item)
+                        choices    = st.session_state.mcq_choices
+                        correct_ar = item["ar"]
+                        if not st.session_state.quiz_answered:
+                            for i, ch in enumerate(choices):
+                                if st.button(ch, key=f"mcq_{idx}_{i}", use_container_width=True):
+                                    st.session_state.quiz_answered=True; st.session_state.mcq_selected=ch; st.rerun()
+                        else:
+                            selected   = st.session_state.mcq_selected
+                            is_correct = selected and normalize(selected)==normalize(correct_ar)
+                            for ch in choices:
+                                if normalize(ch)==normalize(correct_ar):
+                                    st.markdown(f"<div class='mcq-opt mcq-opt-correct'>✅ {ch}</div>", unsafe_allow_html=True)
+                                elif ch==selected and not is_correct:
+                                    st.markdown(f"<div class='mcq-opt mcq-opt-wrong'>❌ {ch}</div>", unsafe_allow_html=True)
+                                else:
+                                    st.markdown(f"<div class='mcq-opt mcq-opt-neutral'>{ch}</div>", unsafe_allow_html=True)
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            if is_correct: st.session_state.quiz_score+=1; st.success("🎉 اجابة صحيحة!")
+                            else: st.error(f"الصحيحة: {correct_ar}")
+                            if mode=="smart" and not is_correct: st.session_state.smart_wrong.append(item)
+                            st.session_state.quiz_results.append({"en":item["en"],"ar":correct_ar,"user":selected or "—","correct":bool(is_correct)})
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            lbl = "➡️ التالي" if idx+1<total else "🏁 النتيجة"
+                            if st.button(lbl, type="primary", use_container_width=True):
+                                st.session_state.update({"quiz_idx":idx+1,"quiz_answered":False,
+                                    "mcq_choices":[],"mcq_selected":None,
+                                    "timer_start":time.time(),"timer_expired":False}); st.rerun()
+                    else:
+                        if not st.session_state.quiz_answered:
+                            ph  = "اكتب الكلمة/الجملة بالإنجليزية..." if mode=="reverse" else "اكتب اجابتك هنا..."
+                            lbl = "✏️ اكتب الكلمة/الجملة بالإنجليزية:" if mode=="reverse" else "✏️ اكتب الترجمة العربية:"
+                            user_ans = st.text_input(lbl, key=f"ans_{idx}_{mode}", placeholder=ph)
+                            ca, cb = st.columns(2)
+                            with ca:
+                                if st.button("✅ تحقق", type="primary", use_container_width=True):
+                                    if user_ans.strip():
+                                        st.session_state.quiz_answered=True; st.session_state.quiz_user_ans=user_ans.strip(); st.rerun()
+                                    else: st.warning("اكتب اجابتك اولاً!")
+                            with cb:
+                                if st.button("👁 اظهر الاجابة", use_container_width=True):
+                                    st.session_state.quiz_answered=True; st.session_state.quiz_show_ans=True
+                                    st.session_state.quiz_user_ans=""; st.rerun()
+                            if mode=="timer": time.sleep(1); st.rerun()
+                        else:
+                            correct    = item["en"] if mode=="reverse" else item["ar"]
+                            user_ans   = st.session_state.quiz_user_ans
+                            show_only  = st.session_state.quiz_show_ans
+                            if st.session_state.timer_expired: st.error("⏰ انتهى الوقت!")
+                            if show_only:
+                                st.markdown(f"<div class='quiz-reveal'>"
+                                    f"<div style='font-size:20px;color:#5b21b6;font-weight:700;margin-bottom:8px;'>الاجابة الصحيحة:</div>"
+                                    f"<div style='font-size:32px;font-weight:900;color:#4c1d95;'>{correct}</div>"
+                                    f"<div style='font-size:18px;color:#6d28d9;margin-top:8px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
+                                st.session_state.quiz_results.append({"en":item["en"],"ar":item["ar"],"user":"—","correct":False})
+                                if mode=="smart": st.session_state.smart_wrong.append(item)
+                            else:
+                                is_correct = normalize(user_ans)==normalize(correct)
+                                if is_correct:
+                                    st.session_state.quiz_score+=1
+                                    st.markdown(f"<div class='quiz-correct'>✅ اجابة صحيحة! 🎉<br><span style='font-size:24px;'>{correct}</span></div>", unsafe_allow_html=True)
+                                else:
+                                    st.markdown(f"<div class='quiz-wrong'>❌ اجابة خاطئة<br>"
+                                        f"<span style='font-size:18px;'>اجابتك: {user_ans}</span><br>"
+                                        f"<span style='font-size:22px;color:#991b1b;'>✔ الصحيحة: {correct}</span><br>"
+                                        f"<span style='font-size:18px;color:#7f1d1d;'>النطق: {item['pron']}</span></div>", unsafe_allow_html=True)
+                                    if mode=="smart": st.session_state.smart_wrong.append(item)
+                                st.session_state.quiz_results.append({"en":item["en"],"ar":item["ar"],"user":user_ans,"correct":is_correct})
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            lbl = "➡️ التالي" if idx+1<total else "🏁 النتيجة"
+                            if st.button(lbl, type="primary", use_container_width=True):
+                                st.session_state.update({"quiz_idx":idx+1,"quiz_answered":False,
+                                    "quiz_user_ans":"","quiz_show_ans":False,
+                                    "timer_start":time.time(),"timer_expired":False}); st.rerun()
