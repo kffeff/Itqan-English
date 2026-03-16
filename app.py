@@ -5,7 +5,7 @@ from supabase import create_client, Client
 
 st.set_page_config(page_title="منصة إتقان اللغة الإنجليزية", layout="wide", page_icon="🎓")
 
-if "dark_mode" not in st.session_state: st.session_state.dark_mode = False
+if "dark_mode" not in st.session_state: st.session_state.dark_mode = True
 DK      = st.session_state.dark_mode
 BG      = "#0f172a" if DK else "#f0f4ff"
 CARD_BG = "#1e293b" if DK else "#ffffff"
@@ -69,7 +69,7 @@ st.markdown(f"""<style>
 .repeat-badge{{background:linear-gradient(135deg,#f59e0b,#d97706);color:white;
     border-radius:99px;padding:4px 14px;font-size:14px;font-weight:700;
     font-family:'Cairo',sans-serif;display:inline-block;margin-bottom:8px;}}
-.platform-title{{text-align:center;color:#2563eb;font-family:'Cairo',sans-serif;font-size:42px;font-weight:900;margin-bottom:8px;}}
+.platform-title{{text-align:center;color:{"#60a5fa" if DK else "#2563eb"};font-family:'Cairo',sans-serif;font-size:42px;font-weight:900;margin-bottom:8px;text-shadow:{"0 0 30px rgba(96,165,250,0.5)" if DK else "none"};}}
 .platform-subtitle{{text-align:center;color:{SUB};font-family:'Cairo',sans-serif;font-size:18px;margin-bottom:30px;}}
 .settings-box{{background:{CARD_BG};border-radius:16px;padding:20px 24px;border:2px solid {BORDER};margin-bottom:20px;}}
 .login-box{{background:{CARD_BG};border-radius:24px;padding:48px 40px;max-width:420px;
