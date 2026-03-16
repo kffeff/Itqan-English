@@ -288,15 +288,15 @@ else:
     if not categories:
         st.info("مرحبا بك! يرجى اضافة اقسام من لوحة الادارة اولا.")
     else:
-        main_tab1, main_tab2, main_tab3 = st.tabs(["📚 التعلم", "📷 تعرف على الأشياء", "💬 محادثة مع AI"])
+        main_tab1, main_tab2 = st.tabs(["📚 التعلم", "💬 محادثة مع AI"])
 
         # ══ تبويب المحادثة ══
-        with main_tab3:
+        with main_tab2:
             st.markdown(f"""
             <div style='text-align:center;padding:20px 0 10px;'>
-                <div style='font-size:36px;font-weight:900;color:#2563eb;font-family:Cairo,sans-serif;'>💬 محادثة مع AI</div>
+                <div style='font-size:36px;font-weight:900;color:#2563eb;font-family:Cairo,sans-serif;'>💬 مساعدك الذكي للغة الإنجليزية</div>
                 <div style='font-size:18px;color:{SUB};font-family:Cairo,sans-serif;margin-top:8px;'>
-                تحدث بالإنجليزي والـ AI يصحح ويعلمك 🤖</div>
+                اكتب أي كلمة أو جملة — سأفهمك حتى لو أخطأت في الكتابة 🤖</div>
             </div>""", unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
 
@@ -309,17 +309,19 @@ else:
                     st.markdown(f"""<div style='background:linear-gradient(135deg,#2563eb,#1d4ed8);
                         border-radius:18px 18px 4px 18px;padding:14px 20px;margin:8px 0 8px auto;
                         max-width:75%;text-align:right;color:white;font-family:Cairo,sans-serif;
-                        font-size:18px;font-weight:600;'>{msg["content"]}</div>""", unsafe_allow_html=True)
+                        font-size:18px;font-weight:600;direction:rtl;'>{msg["content"]}</div>""", unsafe_allow_html=True)
                 else:
                     st.markdown(f"""<div style='background:{CARD_BG};border:2px solid {BORDER};
                         border-radius:18px 18px 18px 4px;padding:14px 20px;margin:8px auto 8px 0;
-                        max-width:80%;text-align:right;color:{TEXT};font-family:Cairo,sans-serif;
-                        font-size:17px;direction:rtl;'>{msg["content"]}</div>""", unsafe_allow_html=True)
+                        max-width:85%;text-align:right;color:{TEXT};font-family:Cairo,sans-serif;
+                        font-size:17px;direction:rtl;line-height:1.8;'>{msg["content"]}</div>""", unsafe_allow_html=True)
+                    if msg.get("audio"):
+                        render_audio(msg["audio"])
 
             st.markdown("<br>", unsafe_allow_html=True)
 
             # حقل الإدخال
-            user_input = st.text_input("اكتب رسالتك هنا:", placeholder="اكتب بالعربي أو الإنجليزي...", key="chat_input", label_visibility="collapsed")
+            user_input = st.text_input("", placeholder="اكتب كلمة أو جملة بالعربي أو الإنجليزي...", key="chat_input", label_visibility="collapsed")
             c1, c2 = st.columns([4, 1])
             with c1:
                 send = st.button("📤 إرسال", type="primary", use_container_width=True)
@@ -329,25 +331,42 @@ else:
 
             if send and user_input.strip():
                 st.session_state.chat_history.append({"role": "user", "content": user_input.strip()})
-                with st.spinner("🤖 AI يفكر..."):
+                with st.spinner("🤖 أفكر..."):
                     try:
                         groq_key = st.secrets["GROQ_API_KEY"]
-                        history_text = "\n".join([f"{'المستخدم' if m['role']=='user' else 'AI'}: {m['content']}" for m in st.session_state.chat_history[-10:]])
+                        messages_history = [
+                            {
+                                "role": "system",
+                                "content": """أنت مدرس لغة إنجليزية ذكي وودود. تتحدث مع طلاب عرب.
+
+قواعدك:
+1. افهم ما يريده المستخدم حتى لو كتب بشكل خاطئ أو مختلط — كن ذكياً في فهم القصد
+2. عندما يعطيك المستخدم كلمة أو جملة (بالعربي أو الإنجليزي أو حتى بطريقة خاطئة):
+   - اكتشف الكلمة/الجملة الصحيحة
+   - أعطه: الكلمة بالإنجليزي بخط كبير واضح
+   - ثم الترجمة العربية
+   - ثم اللفظ بالحروف العربية مثل: (هَلو)
+   - ثم جملة مثال بالإنجليزي مع ترجمتها
+   - ثم سؤال تفاعلي لتشجيعه على الاستمرار
+3. تصرف بشكل بشري وطبيعي — استخدم تعابير مثل "أحسنت!" و"ممتاز!" و"هيا نجرب كلمة أخرى!"
+4. إذا أخطأ المستخدم في الكتابة، صحح له بلطف وفهم ما أراد قوله
+5. اجعل ردودك منظمة وجميلة باستخدام رموز تعبيرية
+6. أجب دائماً بالعربي مع الإنجليزي معاً
+7. لا تكن رسمياً — كن مشجعاً ومحفزاً مثل صديق يعلمك"""
+                            }
+                        ]
+                        # إضافة تاريخ المحادثة
+                        for m in st.session_state.chat_history[-8:]:
+                            messages_history.append({
+                                "role": "user" if m["role"] == "user" else "assistant",
+                                "content": m["content"]
+                            })
+
                         payload = {
                             "model": "llama-3.3-70b-versatile",
-                            "messages": [
-                                {
-                                    "role": "system",
-                                    "content": """أنت مساعد تعليمي لتعلم اللغة الإنجليزية. مهمتك:
-1. إذا كتب المستخدم بالإنجليزي: صحح أخطاءه وعلمه
-2. إذا كتب بالعربي: ترجم له وعلمه الكلمات
-3. أجب دائماً بالعربي مع أمثلة إنجليزية
-4. كن مشجعاً وودوداً
-5. أجب بشكل قصير ومفيد"""
-                                },
-                                {"role": "user", "content": user_input.strip()}
-                            ],
-                            "max_tokens": 500
+                            "messages": messages_history,
+                            "max_tokens": 600,
+                            "temperature": 0.7
                         }
                         res = requests.post(
                             "https://api.groq.com/openai/v1/chat/completions",
@@ -358,109 +377,21 @@ else:
                             json=payload, timeout=30)
                         res_json = res.json()
                         if "error" in res_json:
-                            reply = f"خطأ: {res_json['error']['message']}"
+                            reply = f"عذراً، حدث خطأ: {res_json['error']['message']}"
+                            audio_path = None
                         else:
                             reply = res_json["choices"][0]["message"]["content"]
-                        st.session_state.chat_history.append({"role": "ai", "content": reply})
-                    except Exception as e:
-                        st.session_state.chat_history.append({"role": "ai", "content": f"حدث خطأ: {e}"})
-                st.rerun()
-
-        # ══ تبويب الذكاء الاصطناعي ══
-        with main_tab2:
-            st.markdown(f"""
-            <div style='text-align:center;padding:20px 0 10px;'>
-                <div style='font-size:36px;font-weight:900;color:#2563eb;font-family:Cairo,sans-serif;'>📷 تعرف على أي شيء!</div>
-                <div style='font-size:18px;color:{SUB};font-family:Cairo,sans-serif;margin-top:8px;'>
-                صوّر أي شيء من حولك وسأخبرك باسمه بالإنجليزي 🤖</div>
-            </div>""", unsafe_allow_html=True)
-            st.markdown("<br>", unsafe_allow_html=True)
-
-            uploaded = st.file_uploader("ارفع صورة:", type=["jpg","jpeg","png","webp"], label_visibility="visible")
-
-            if uploaded:
-                img_bytes = uploaded.read()
-                img_b64 = base64.b64encode(img_bytes).decode()
-                img_type = uploaded.type
-                col_img, col_btn = st.columns([2, 1])
-                with col_img:
-                    st.image(uploaded, use_container_width=True)
-                with col_btn:
-                    st.markdown("<br><br>", unsafe_allow_html=True)
-                    if st.button("🔍 تعرف على هذا الشيء!", type="primary", use_container_width=True):
-                        with st.spinner("🤖 الذكاء الاصطناعي يحلل الصورة..."):
-                            payload = {
-                                "model": "claude-sonnet-4-6",
-                                "max_tokens": 500,
-                                "messages": [{
-                                    "role": "user",
-                                    "content": [
-                                        {
-                                            "type": "image",
-                                            "source": {
-                                                "type": "base64",
-                                                "media_type": img_type,
-                                                "data": img_b64
-                                            }
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": """انظر لهذه الصورة وحدد أبرز شيء فيها.
-أجب فقط بهذا JSON بدون أي نص إضافي أو backticks:
-{
-  "en": "اسم الشيء بالإنجليزي",
-  "ar": "اسم الشيء بالعربي",
-  "pron": "النطق بالحروف العربية",
-  "desc_ar": "جملة واحدة تصف الشيء بالعربي",
-  "example": "جملة مثال قصيرة بالإنجليزي تستخدم الكلمة"
-}"""
-                                        }
-                                    ]
-                                }]
-                            }
+                            # توليد صوت للكلمة الإنجليزية إذا وجدت
                             try:
-                                res = requests.post(
-                                    "https://api.anthropic.com/v1/messages",
-                                    headers={
-                                        "Content-Type": "application/json",
-                                        "anthropic-version": "2023-06-01",
-                                        "x-api-key": st.secrets["ANTHROPIC_API_KEY"]
-                                    },
-                                    json=payload, timeout=30)
-                                resp_json = res.json()
-                                if "error" in resp_json:
-                                    st.error(f"خطأ من API: {resp_json['error']['message']}")
-                                    st.stop()
-                                raw = resp_json["content"][0]["text"].strip()
-                                raw = raw.replace("```json","").replace("```","").strip()
-                                st.session_state["vision_result"] = json.loads(raw)
-                            except Exception as e:
-                                st.error(f"حدث خطأ: {e}")
-
-            if "vision_result" in st.session_state:
-                d = st.session_state["vision_result"]
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.markdown(f"""
-                <div style='background:{CARD_BG};border-radius:24px;padding:36px 28px;
-                    border-top:8px solid #2563eb;box-shadow:0 10px 40px rgba(37,99,235,0.2);
-                    text-align:center;'>
-                    <div style='font-size:56px;font-weight:900;color:{TEXT};margin-bottom:10px;letter-spacing:2px;'>{d.get("en","")}</div>
-                    <div style='font-size:32px;font-weight:700;color:#059669;font-family:Cairo,sans-serif;margin-bottom:16px;'>{d.get("ar","")}</div>
-                    <div style='background:linear-gradient(135deg,#fff1f2,#ffe4e6);border:3px dashed #f43f5e;
-                        border-radius:14px;padding:14px 24px;display:inline-block;margin-bottom:20px;'>
-                        <span style='font-size:34px;font-weight:900;color:#e11d48;font-family:Cairo,sans-serif;'>{d.get("pron","")}</span>
-                    </div>
-                    <div style='font-size:18px;color:{SUB};font-family:Cairo,sans-serif;margin-bottom:14px;'>{d.get("desc_ar","")}</div>
-                    <div style='background:linear-gradient(135deg,#ede9fe,#ddd6fe);border-radius:14px;
-                        padding:14px 24px;font-size:20px;color:#4c1d95;font-style:italic;'>
-                        💬 {d.get("example","")}
-                    </div>
-                </div>""", unsafe_allow_html=True)
-                st.markdown("<br>", unsafe_allow_html=True)
-                audio_path = ensure_audio(d.get("en",""), "en-US-AndrewMultilingualNeural", -30)
-                render_audio(audio_path)
-                if st.button("🔄 صورة جديدة", use_container_width=True):
-                    del st.session_state["vision_result"]; st.rerun()
+                                import re
+                                en_words = re.findall(r'\b[A-Za-z][A-Za-z\s]{1,30}\b', reply)
+                                audio_path = ensure_audio(en_words[0].strip(), "en-US-AndrewMultilingualNeural", -30) if en_words else None
+                            except:
+                                audio_path = None
+                        st.session_state.chat_history.append({"role": "ai", "content": reply, "audio": audio_path})
+                    except Exception as e:
+                        st.session_state.chat_history.append({"role": "ai", "content": f"حدث خطأ: {e}", "audio": None})
+                st.rerun()
 
         # ══ تبويب التعلم ══
         with main_tab1:
