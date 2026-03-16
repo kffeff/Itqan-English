@@ -80,15 +80,26 @@ label,.stTextInput label,.stTextArea label,.stSelectbox label,.stSlider label,
 .stAlert p,.stInfo p{{color:{TEXT}!important;font-weight:600;}}
 .stTabs [data-baseweb="tab"]{{color:{TEXT}!important;font-weight:700!important;font-family:'Cairo',sans-serif!important;}}
 .stTabs [data-baseweb="tab"][aria-selected="true"]{{color:#2563eb!important;}}
+.stTabs [data-baseweb="tab-list"]{{background:transparent!important;}}
+/* إصلاح لون التبويبات بشكل قوي */
+button[role="tab"], button[role="tab"] p, button[role="tab"] span, button[role="tab"] div{{
+    color:{TEXT}!important;font-weight:700!important;font-family:'Cairo',sans-serif!important;}}
+button[role="tab"][aria-selected="true"], button[role="tab"][aria-selected="true"] p{{
+    color:#2563eb!important;}}
 /* إصلاح لون الإعدادات */
 .streamlit-expanderHeader, .streamlit-expanderHeader p,
 details summary, details summary p,
 [data-testid="stExpander"] summary,
 [data-testid="stExpander"] summary p{{color:#ffffff!important;font-weight:700!important;}}
-button, button *, button p, button span, button div,
+button, button p, button div,
 .stButton button, .stButton button * {{color:#ffffff!important;font-family:'Cairo',sans-serif!important;font-weight:700!important;}}
 .stButton>button{{background:#1e293b!important;border:2px solid #334155!important;border-radius:10px!important;}}
 .stButton>button:hover{{background:#2d3f55!important;border-color:#2563eb!important;}}
+/* تبويبات - لونها يعتمد على الوضع */
+button[role="tab"]{{color:{TEXT}!important;background:transparent!important;border:none!important;font-family:'Cairo',sans-serif!important;font-weight:700!important;}}
+button[role="tab"] *{{color:{TEXT}!important;}}
+button[role="tab"][aria-selected="true"]{{color:#2563eb!important;}}
+button[role="tab"][aria-selected="true"] *{{color:#2563eb!important;}}
 .stTextInput input,.stTextArea textarea{{background-color:{INPUT_BG}!important;color:#ffffff!important;
     border:2px solid #2563eb!important;border-radius:10px!important;font-family:'Cairo',sans-serif!important;}}
 .stTextInput input::placeholder,.stTextArea textarea::placeholder{{color:#94a3b8!important;}}
