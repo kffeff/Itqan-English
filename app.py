@@ -91,6 +91,7 @@ button[role="tab"][aria-selected="true"], button[role="tab"][aria-selected="true
 details summary, details summary p,
 [data-testid="stExpander"] summary,
 [data-testid="stExpander"] summary p{{color:#ffffff!important;font-weight:700!important;}}
+[data-testid="stExpander"] summary{{background:#1e293b!important;border-radius:10px!important;padding:12px 16px!important;}}
 button, button p, button div,
 .stButton button, .stButton button * {{color:#ffffff!important;font-family:'Cairo',sans-serif!important;font-weight:700!important;}}
 .stButton>button{{background:#1e293b!important;border:2px solid #334155!important;border-radius:10px!important;}}
