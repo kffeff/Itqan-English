@@ -415,7 +415,7 @@ else:
         with main_tab1:
             choice = st.selectbox("📂 اختر القسم الذي يناسبك:", cat_names)
 
-            with st.expander("⚙️ الإعدادات", expanded=False):
+            with st.expander("⚙️ إعدادات الصوت والعرض", expanded=False):
                 col1, col2, col3 = st.columns([2, 2, 1])
                 with col1:
                     selected_voice_key = st.selectbox("🎙️ اختر المعلم:", list(VOICES.keys()), key="v_sel")
