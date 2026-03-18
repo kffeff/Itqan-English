@@ -109,6 +109,8 @@ div[data-baseweb="select"] span,div[data-baseweb="select"] div{{color:#ffffff!im
 ul[data-baseweb="menu"]{{background-color:{INPUT_BG}!important;}}
 ul[data-baseweb="menu"] li{{color:#ffffff!important;}}
 ul[data-baseweb="menu"] li:hover{{background-color:#2563eb!important;}}
+/* إخفاء نص أزرار أوضاع التعلم وإبقاء الأيقونة فقط */
+[data-testid="stButton"] button span{{font-size:0!important;}}
 </style>""", unsafe_allow_html=True)
 
 SUPABASE_URL = "https://iwpccslbxlbaargqpgeg.supabase.co"
@@ -439,9 +441,37 @@ else:
                 st.warning("لا توجد نتائج.")
             else:
                 v_id = VOICES[selected_voice_key]
-                st.markdown("**اختر وضع التعلم:**")
-                r1c1,r1c2,r1c3,r1c4 = st.columns(4)
-                r2c1,r2c2,r2c3,_    = st.columns(4)
+
+                # ══ أوضاع التعلم بتصميم شبكة حديث ══
+                active_mode = st.session_state.quiz_mode if st.session_state.quiz_active else "study"
+
+                MODES = [
+                    ("📖", "دراسة",         "study",   "#2563eb"),
+                    ("📝", "اختبار",        "normal",  "#7c3aed"),
+                    ("🔊", "استماع",        "listen",  "#059669"),
+                    ("⏱️", "مؤقت",          "timer",   "#d97706"),
+                    ("🎯", "اختيار متعدد", "mcq",     "#dc2626"),
+                    ("🔤", "اختبار عكسي",  "reverse", "#0891b2"),
+                    ("🔁", "تكرار ذكي",    "smart",   "#7c3aed"),
+                ]
+
+                st.markdown("<div style='margin-bottom:8px;font-weight:700;color:" + TEXT + ";font-family:Cairo,sans-serif;'>اختر وضع التعلم:</div>", unsafe_allow_html=True)
+
+                cols_row1 = st.columns(4)
+                cols_row2 = st.columns(4)
+
+                def make_btn(col, icon, label, mode, color):
+                    is_active = (mode == active_mode)
+                    with col:
+                        st.markdown(f"""<div style='background:{"" + color + "22" if is_active else CARD_BG};
+                            border:{"3px solid " + color if is_active else "2px solid " + BORDER};
+                            border-radius:14px;padding:12px 4px;text-align:center;margin-bottom:4px;
+                            box-shadow:{"0 0 16px " + color + "44" if is_active else "none"};'>
+                            <div style='font-size:24px;'>{icon}</div>
+                            <div style='font-size:13px;font-weight:700;color:{color if is_active else TEXT};
+                                font-family:Cairo,sans-serif;margin-top:2px;'>{label}</div>
+                            </div>""", unsafe_allow_html=True)
+                        return st.button(label, key=f"mode_{mode}", use_container_width=True)
 
                 def start_quiz(mode):
                     shuffled = items.copy(); random.shuffle(shuffled)
@@ -453,20 +483,14 @@ else:
                         "timer_start":time.time(),"timer_expired":False,
                     }); st.rerun()
 
-                def mode_btn(col, label, mode_name):
-                    active = st.session_state.quiz_active and st.session_state.quiz_mode==mode_name
-                    with col:
-                        return st.button(label, use_container_width=True, type="primary" if active else "secondary")
-
-                if r1c1.button("📖 دراسة", use_container_width=True,
-                               type="primary" if not st.session_state.quiz_active else "secondary"):
-                    st.session_state.quiz_active = False; st.rerun()
-                if mode_btn(r1c2,"📝 اختبار","normal"): start_quiz("normal")
-                if mode_btn(r1c3,"🔊 استماع","listen"): start_quiz("listen")
-                if mode_btn(r1c4,"⏱️ مؤقت","timer"): start_quiz("timer")
-                if mode_btn(r2c1,"🎯 اختيار متعدد","mcq"): start_quiz("mcq")
-                if mode_btn(r2c2,"🔤 اختبار عكسي","reverse"): start_quiz("reverse")
-                if mode_btn(r2c3,"🔁 تكرار ذكي","smart"): start_quiz("smart")
+                if make_btn(cols_row1[0],"📖","دراسة","study","#2563eb"):
+                    st.session_state.quiz_active=False; st.rerun()
+                if make_btn(cols_row1[1],"📝","اختبار","normal","#7c3aed"): start_quiz("normal")
+                if make_btn(cols_row1[2],"🔊","استماع","listen","#059669"): start_quiz("listen")
+                if make_btn(cols_row1[3],"⏱️","مؤقت","timer","#d97706"): start_quiz("timer")
+                if make_btn(cols_row2[0],"🎯","اختيار متعدد","mcq","#dc2626"): start_quiz("mcq")
+                if make_btn(cols_row2[1],"🔤","اختبار عكسي","reverse","#0891b2"): start_quiz("reverse")
+                if make_btn(cols_row2[2],"🔁","تكرار ذكي","smart","#7c3aed"): start_quiz("smart")
 
                 st.markdown("<hr>", unsafe_allow_html=True)
 
