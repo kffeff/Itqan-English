@@ -18,6 +18,9 @@ st.markdown(f"""<style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
 #MainMenu,footer,header,.stDeployButton,[data-testid='stSidebar'],[data-testid='stSidebarCollapseButton']{{display:none!important;visibility:hidden!important;}}
 .stApp{{background-color:{BG};font-family:'Cairo',sans-serif;}}
+/* تقليل padding الرئيسي */
+.stMainBlockContainer{{padding-top:1rem!important;padding-bottom:1rem!important;}}
+.block-container{{padding-top:1rem!important;max-width:860px!important;margin:auto!important;}}
 .card{{background:{CARD_BG};padding:32px 28px 24px;border-radius:22px;border-right:10px solid #2563eb;
     margin-bottom:10px;box-shadow:0 8px 32px rgba(37,99,235,0.12);text-align:center;width:100%;
     transition:transform 0.18s ease,box-shadow 0.18s ease;}}
@@ -69,8 +72,8 @@ st.markdown(f"""<style>
 .repeat-badge{{background:linear-gradient(135deg,#f59e0b,#d97706);color:white;
     border-radius:99px;padding:4px 14px;font-size:14px;font-weight:700;
     font-family:'Cairo',sans-serif;display:inline-block;margin-bottom:8px;}}
-.platform-title{{text-align:center;color:{"#60a5fa" if DK else "#2563eb"};font-family:'Cairo',sans-serif;font-size:42px;font-weight:900;margin-bottom:8px;text-shadow:{"0 0 30px rgba(96,165,250,0.5)" if DK else "none"};}}
-.platform-subtitle{{text-align:center;color:{SUB};font-family:'Cairo',sans-serif;font-size:18px;margin-bottom:30px;}}
+.platform-title{{text-align:center;color:{"#60a5fa" if DK else "#2563eb"};font-family:'Cairo',sans-serif;font-size:32px;font-weight:900;margin-bottom:4px;text-shadow:{"0 0 30px rgba(96,165,250,0.5)" if DK else "none"};}}
+.platform-subtitle{{text-align:center;color:{SUB};font-family:'Cairo',sans-serif;font-size:15px;margin-bottom:16px;}}
 .settings-box{{background:{CARD_BG};border-radius:16px;padding:20px 24px;border:2px solid {BORDER};margin-bottom:20px;}}
 .login-box{{background:{CARD_BG};border-radius:24px;padding:48px 40px;max-width:420px;
     margin:60px auto;box-shadow:0 20px 60px rgba(37,99,235,0.15);border-top:8px solid #2563eb;text-align:center;}}
@@ -109,8 +112,6 @@ div[data-baseweb="select"] span,div[data-baseweb="select"] div{{color:#ffffff!im
 ul[data-baseweb="menu"]{{background-color:{INPUT_BG}!important;}}
 ul[data-baseweb="menu"] li{{color:#ffffff!important;}}
 ul[data-baseweb="menu"] li:hover{{background-color:#2563eb!important;}}
-/* إخفاء نص أزرار أوضاع التعلم وإبقاء الأيقونة فقط */
-[data-testid="stButton"] button span{{font-size:0!important;}}
 </style>""", unsafe_allow_html=True)
 
 SUPABASE_URL = "https://iwpccslbxlbaargqpgeg.supabase.co"
@@ -415,16 +416,23 @@ else:
 
         # ══ تبويب التعلم ══
         with main_tab1:
-            choice = st.selectbox("📂 اختر القسم الذي يناسبك:", cat_names)
 
+            # ── اختيار القسم + بحث في صف واحد ──
+            c_sel, c_search = st.columns([3, 2])
+            with c_sel:
+                choice = st.selectbox("", cat_names, label_visibility="collapsed", placeholder="اختر القسم...")
+            with c_search:
+                search_q = st.text_input("", placeholder="🔍 بحث سريع...", key="search_q", label_visibility="collapsed")
+
+            # ── الإعدادات في صف واحد مدمج ──
             with st.expander("⚙️ إعدادات الصوت والعرض", expanded=False):
-                col1, col2, col3 = st.columns([2, 2, 1])
+                col1, col2, col3 = st.columns([3, 2, 1])
                 with col1:
-                    selected_voice_key = st.selectbox("🎙️ اختر المعلم:", list(VOICES.keys()), key="v_sel")
+                    selected_voice_key = st.selectbox("🎙️ المعلم:", list(VOICES.keys()), key="v_sel", label_visibility="visible")
                 with col2:
-                    search_q = st.text_input("🔍 بحث سريع:", key="search_q")
+                    selected_speed = st.slider("⚡ السرعة:", -50, 0, -30, 5, key="s_sel")
                 with col3:
-                    selected_speed = st.slider("⚡ سرعة النطق:", -50, 0, -30, 5, key="s_sel")
+                    st.markdown("<br>", unsafe_allow_html=True)
                     if st.button("🌙" if not DK else "☀️", use_container_width=True):
                         st.session_state.dark_mode = not st.session_state.dark_mode; st.rerun()
 
@@ -442,37 +450,6 @@ else:
             else:
                 v_id = VOICES[selected_voice_key]
 
-                # ══ أوضاع التعلم بتصميم شبكة حديث ══
-                active_mode = st.session_state.quiz_mode if st.session_state.quiz_active else "study"
-
-                MODES = [
-                    ("📖", "دراسة",         "study",   "#2563eb"),
-                    ("📝", "اختبار",        "normal",  "#7c3aed"),
-                    ("🔊", "استماع",        "listen",  "#059669"),
-                    ("⏱️", "مؤقت",          "timer",   "#d97706"),
-                    ("🎯", "اختيار متعدد", "mcq",     "#dc2626"),
-                    ("🔤", "اختبار عكسي",  "reverse", "#0891b2"),
-                    ("🔁", "تكرار ذكي",    "smart",   "#7c3aed"),
-                ]
-
-                st.markdown("<div style='margin-bottom:8px;font-weight:700;color:" + TEXT + ";font-family:Cairo,sans-serif;'>اختر وضع التعلم:</div>", unsafe_allow_html=True)
-
-                cols_row1 = st.columns(4)
-                cols_row2 = st.columns(4)
-
-                def make_btn(col, icon, label, mode, color):
-                    is_active = (mode == active_mode)
-                    with col:
-                        st.markdown(f"""<div style='background:{"" + color + "22" if is_active else CARD_BG};
-                            border:{"3px solid " + color if is_active else "2px solid " + BORDER};
-                            border-radius:14px;padding:12px 4px;text-align:center;margin-bottom:4px;
-                            box-shadow:{"0 0 16px " + color + "44" if is_active else "none"};'>
-                            <div style='font-size:24px;'>{icon}</div>
-                            <div style='font-size:13px;font-weight:700;color:{color if is_active else TEXT};
-                                font-family:Cairo,sans-serif;margin-top:2px;'>{label}</div>
-                            </div>""", unsafe_allow_html=True)
-                        return st.button(label, key=f"mode_{mode}", use_container_width=True)
-
                 def start_quiz(mode):
                     shuffled = items.copy(); random.shuffle(shuffled)
                     st.session_state.update({
@@ -483,14 +460,43 @@ else:
                         "timer_start":time.time(),"timer_expired":False,
                     }); st.rerun()
 
-                if make_btn(cols_row1[0],"📖","دراسة","study","#2563eb"):
-                    st.session_state.quiz_active=False; st.rerun()
-                if make_btn(cols_row1[1],"📝","اختبار","normal","#7c3aed"): start_quiz("normal")
-                if make_btn(cols_row1[2],"🔊","استماع","listen","#059669"): start_quiz("listen")
-                if make_btn(cols_row1[3],"⏱️","مؤقت","timer","#d97706"): start_quiz("timer")
-                if make_btn(cols_row2[0],"🎯","اختيار متعدد","mcq","#dc2626"): start_quiz("mcq")
-                if make_btn(cols_row2[1],"🔤","اختبار عكسي","reverse","#0891b2"): start_quiz("reverse")
-                if make_btn(cols_row2[2],"🔁","تكرار ذكي","smart","#7c3aed"): start_quiz("smart")
+                # ── أزرار الأوضاع في شبكة 3×3 مريحة ──
+                MODES = [
+                    ("📖 دراسة",        None,      False),
+                    ("📝 اختبار",       "normal",  False),
+                    ("🔊 استماع",       "listen",  False),
+                    ("⏱️ مؤقت",         "timer",   False),
+                    ("🎯 اختيار متعدد","mcq",     False),
+                    ("🔤 اختبار عكسي", "reverse", False),
+                    ("🔁 تكرار ذكي",   "smart",   False),
+                ]
+
+                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                r1 = st.columns(3)
+                r2 = st.columns(3)
+                r3 = st.columns(3)
+
+                def is_active(mode):
+                    if mode is None: return not st.session_state.quiz_active
+                    return st.session_state.quiz_active and st.session_state.quiz_mode == mode
+
+                all_cols = r1 + r2 + r3
+                mode_data = [
+                    ("📖 دراسة", None), ("📝 اختبار","normal"), ("🔊 استماع","listen"),
+                    ("⏱️ مؤقت","timer"), ("🎯 اختيار متعدد","mcq"), ("🔤 اختبار عكسي","reverse"),
+                    ("🔁 تكرار ذكي","smart"),
+                ]
+
+                for i, (label, mode) in enumerate(mode_data):
+                    active = is_active(mode)
+                    with all_cols[i]:
+                        if st.button(label, use_container_width=True,
+                            type="primary" if active else "secondary",
+                            key=f"mdbtn_{i}"):
+                            if mode is None:
+                                st.session_state.quiz_active = False; st.rerun()
+                            else:
+                                start_quiz(mode)
 
                 st.markdown("<hr>", unsafe_allow_html=True)
 
