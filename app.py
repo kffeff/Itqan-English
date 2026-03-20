@@ -112,6 +112,70 @@ div[data-baseweb="select"] span,div[data-baseweb="select"] div{{color:#ffffff!im
 ul[data-baseweb="menu"]{{background-color:{INPUT_BG}!important;}}
 ul[data-baseweb="menu"] li{{color:#ffffff!important;}}
 ul[data-baseweb="menu"] li:hover{{background-color:#2563eb!important;}}
+
+/* ══ Slide Animation ══ */
+@keyframes slideUp{{
+    from{{opacity:0;transform:translateY(30px);}}
+    to{{opacity:1;transform:translateY(0);}}
+}}
+.slide-up{{animation:slideUp 0.35s ease forwards;}}
+
+/* ══ Anki Flash Card ══ */
+.anki-card{{
+    background:{CARD_BG};
+    border-radius:24px;
+    padding:0;
+    margin-bottom:16px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.25);
+    overflow:hidden;
+    animation:slideUp 0.35s ease forwards;
+    border:1px solid {BORDER};
+}}
+.anki-header{{
+    background:linear-gradient(135deg,#1e40af,#2563eb);
+    padding:20px 24px 16px;
+    text-align:center;
+}}
+.anki-en{{
+    font-size:clamp(28px,6vw,48px);
+    font-weight:900;
+    color:#ffffff;
+    letter-spacing:1px;
+    line-height:1.2;
+}}
+.anki-body{{
+    padding:20px 24px;
+    text-align:center;
+}}
+.anki-ar{{
+    font-size:clamp(22px,4vw,32px);
+    font-weight:700;
+    color:#34d399;
+    font-family:'Cairo',sans-serif;
+    margin-bottom:14px;
+}}
+.anki-pron{{
+    background:{"#0f172a" if DK else "#f1f5f9"};
+    border:2px dashed #f43f5e;
+    border-radius:14px;
+    padding:12px 16px;
+    font-size:clamp(20px,4vw,32px);
+    font-weight:900;
+    color:#f43f5e;
+    font-family:'Cairo',sans-serif;
+    display:inline-block;
+    width:100%;
+}}
+.anki-footer{{
+    padding:0 24px 20px;
+    display:flex;
+    justify-content:center;
+}}
+@media(max-width:600px){{
+    .anki-header{{padding:16px 16px 12px;}}
+    .anki-body{{padding:14px 16px;}}
+    .anki-footer{{padding:0 16px 16px;}}
+}}
 </style>""", unsafe_allow_html=True)
 
 SUPABASE_URL = "https://iwpccslbxlbaargqpgeg.supabase.co"
@@ -530,13 +594,20 @@ else:
 
                     st.markdown("<br>", unsafe_allow_html=True)
                     for item in items:
-                        st.markdown(
-                            f"<div class='card'><div class='en-text'>{item['en']}</div>"
-                            f"<div class='ar-text'>{item['ar']}</div>"
-                            f"<div class='pron-box'>{item['pron']}</div></div>",
-                            unsafe_allow_html=True)
+                        st.markdown(f"""
+                        <div class='anki-card'>
+                            <div class='anki-header'>
+                                <div class='anki-en'>{item['en']}</div>
+                            </div>
+                            <div class='anki-body'>
+                                <div class='anki-ar'>{item['ar']}</div>
+                                <div class='anki-pron'>{item['pron']}</div>
+                            </div>
+                            <div class='anki-footer'>
+                            </div>
+                        </div>""", unsafe_allow_html=True)
                         render_audio(ensure_audio(item["en"], v_id, selected_speed))
-                        st.markdown("<hr>", unsafe_allow_html=True)
+                        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
                 else:
                     mode = st.session_state.quiz_mode
                     if mode == "smart":
