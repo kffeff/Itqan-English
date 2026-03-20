@@ -18,9 +18,6 @@ st.markdown(f"""<style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
 #MainMenu,footer,header,.stDeployButton,[data-testid='stSidebar'],[data-testid='stSidebarCollapseButton']{{display:none!important;visibility:hidden!important;}}
 .stApp{{background-color:{BG};font-family:'Cairo',sans-serif;}}
-/* تقليل padding الرئيسي */
-.stMainBlockContainer{{padding-top:1rem!important;padding-bottom:1rem!important;}}
-.block-container{{padding-top:1rem!important;max-width:860px!important;margin:auto!important;}}
 .card{{background:{CARD_BG};padding:32px 28px 24px;border-radius:22px;border-right:10px solid #2563eb;
     margin-bottom:10px;box-shadow:0 8px 32px rgba(37,99,235,0.12);text-align:center;width:100%;
     transition:transform 0.18s ease,box-shadow 0.18s ease;}}
@@ -72,8 +69,8 @@ st.markdown(f"""<style>
 .repeat-badge{{background:linear-gradient(135deg,#f59e0b,#d97706);color:white;
     border-radius:99px;padding:4px 14px;font-size:14px;font-weight:700;
     font-family:'Cairo',sans-serif;display:inline-block;margin-bottom:8px;}}
-.platform-title{{text-align:center;color:{"#60a5fa" if DK else "#2563eb"};font-family:'Cairo',sans-serif;font-size:32px;font-weight:900;margin-bottom:4px;text-shadow:{"0 0 30px rgba(96,165,250,0.5)" if DK else "none"};}}
-.platform-subtitle{{text-align:center;color:{SUB};font-family:'Cairo',sans-serif;font-size:15px;margin-bottom:16px;}}
+.platform-title{{text-align:center;color:{"#60a5fa" if DK else "#2563eb"};font-family:'Cairo',sans-serif;font-size:42px;font-weight:900;margin-bottom:8px;text-shadow:{"0 0 30px rgba(96,165,250,0.5)" if DK else "none"};}}
+.platform-subtitle{{text-align:center;color:{SUB};font-family:'Cairo',sans-serif;font-size:18px;margin-bottom:30px;}}
 .settings-box{{background:{CARD_BG};border-radius:16px;padding:20px 24px;border:2px solid {BORDER};margin-bottom:20px;}}
 .login-box{{background:{CARD_BG};border-radius:24px;padding:48px 40px;max-width:420px;
     margin:60px auto;box-shadow:0 20px 60px rgba(37,99,235,0.15);border-top:8px solid #2563eb;text-align:center;}}
@@ -112,70 +109,6 @@ div[data-baseweb="select"] span,div[data-baseweb="select"] div{{color:#ffffff!im
 ul[data-baseweb="menu"]{{background-color:{INPUT_BG}!important;}}
 ul[data-baseweb="menu"] li{{color:#ffffff!important;}}
 ul[data-baseweb="menu"] li:hover{{background-color:#2563eb!important;}}
-
-/* ══ Slide Animation ══ */
-@keyframes slideUp{{
-    from{{opacity:0;transform:translateY(30px);}}
-    to{{opacity:1;transform:translateY(0);}}
-}}
-.slide-up{{animation:slideUp 0.35s ease forwards;}}
-
-/* ══ Anki Flash Card ══ */
-.anki-card{{
-    background:{CARD_BG};
-    border-radius:24px;
-    padding:0;
-    margin-bottom:16px;
-    box-shadow:0 8px 32px rgba(0,0,0,0.25);
-    overflow:hidden;
-    animation:slideUp 0.35s ease forwards;
-    border:1px solid {BORDER};
-}}
-.anki-header{{
-    background:linear-gradient(135deg,#1e40af,#2563eb);
-    padding:20px 24px 16px;
-    text-align:center;
-}}
-.anki-en{{
-    font-size:clamp(28px,6vw,48px);
-    font-weight:900;
-    color:#ffffff;
-    letter-spacing:1px;
-    line-height:1.2;
-}}
-.anki-body{{
-    padding:20px 24px;
-    text-align:center;
-}}
-.anki-ar{{
-    font-size:clamp(22px,4vw,32px);
-    font-weight:700;
-    color:#34d399;
-    font-family:'Cairo',sans-serif;
-    margin-bottom:14px;
-}}
-.anki-pron{{
-    background:{"#0f172a" if DK else "#f1f5f9"};
-    border:2px dashed #f43f5e;
-    border-radius:14px;
-    padding:12px 16px;
-    font-size:clamp(20px,4vw,32px);
-    font-weight:900;
-    color:#f43f5e;
-    font-family:'Cairo',sans-serif;
-    display:inline-block;
-    width:100%;
-}}
-.anki-footer{{
-    padding:0 24px 20px;
-    display:flex;
-    justify-content:center;
-}}
-@media(max-width:600px){{
-    .anki-header{{padding:16px 16px 12px;}}
-    .anki-body{{padding:14px 16px;}}
-    .anki-footer{{padding:0 16px 16px;}}
-}}
 </style>""", unsafe_allow_html=True)
 
 SUPABASE_URL = "https://iwpccslbxlbaargqpgeg.supabase.co"
@@ -480,18 +413,16 @@ else:
 
         # ══ تبويب التعلم ══
         with main_tab1:
-            choice = st.selectbox("📂 القسم:", cat_names, label_visibility="visible")
-            search_q = st.text_input("", placeholder="🔍 بحث سريع...", key="search_q", label_visibility="collapsed")
+            choice = st.selectbox("📂 اختر القسم الذي يناسبك:", cat_names)
 
-            # ── الإعدادات في صف واحد مدمج ──
             with st.expander("⚙️ إعدادات الصوت والعرض", expanded=False):
-                col1, col2, col3 = st.columns([3, 2, 1])
+                col1, col2, col3 = st.columns([2, 2, 1])
                 with col1:
-                    selected_voice_key = st.selectbox("🎙️ المعلم:", list(VOICES.keys()), key="v_sel", label_visibility="visible")
+                    selected_voice_key = st.selectbox("🎙️ اختر المعلم:", list(VOICES.keys()), key="v_sel")
                 with col2:
-                    selected_speed = st.slider("⚡ السرعة:", -50, 0, -30, 5, key="s_sel")
+                    search_q = st.text_input("🔍 بحث سريع:", key="search_q")
                 with col3:
-                    st.markdown("<br>", unsafe_allow_html=True)
+                    selected_speed = st.slider("⚡ سرعة النطق:", -50, 0, -30, 5, key="s_sel")
                     if st.button("🌙" if not DK else "☀️", use_container_width=True):
                         st.session_state.dark_mode = not st.session_state.dark_mode; st.rerun()
 
@@ -508,6 +439,9 @@ else:
                 st.warning("لا توجد نتائج.")
             else:
                 v_id = VOICES[selected_voice_key]
+                st.markdown("**اختر وضع التعلم:**")
+                r1c1,r1c2,r1c3,r1c4 = st.columns(4)
+                r2c1,r2c2,r2c3,_    = st.columns(4)
 
                 def start_quiz(mode):
                     shuffled = items.copy(); random.shuffle(shuffled)
@@ -519,48 +453,20 @@ else:
                         "timer_start":time.time(),"timer_expired":False,
                     }); st.rerun()
 
-                active_mode = st.session_state.quiz_mode if st.session_state.quiz_active else "study"
+                def mode_btn(col, label, mode_name):
+                    active = st.session_state.quiz_active and st.session_state.quiz_mode==mode_name
+                    with col:
+                        return st.button(label, use_container_width=True, type="primary" if active else "secondary")
 
-                modes = [
-                    ("📖","دراسة","study","#2563eb"),
-                    ("📝","اختبار","normal","#7c3aed"),
-                    ("🔊","استماع","listen","#059669"),
-                    ("⏱️","مؤقت","timer","#d97706"),
-                    ("🎯","اختيار متعدد","mcq","#dc2626"),
-                    ("🔤","اختبار عكسي","reverse","#0891b2"),
-                    ("🔁","تكرار ذكي","smart","#a855f7"),
-                ]
-
-                cards = ""
-                for icon, label, mode, color in modes:
-                    active = mode == active_mode
-                    bg = f"{color}30" if active else CARD_BG
-                    border = f"2.5px solid {color}" if active else f"1.5px solid {BORDER}"
-                    shadow = f"0 0 14px {color}55" if active else "none"
-                    cards += f"""<div onclick="document.getElementById('mdbtn_{mode}').click()"
-                        style="background:{bg};border:{border};border-radius:14px;
-                        padding:14px 6px;text-align:center;cursor:pointer;
-                        box-shadow:{shadow};transition:all 0.2s;">
-                        <div style="font-size:26px;line-height:1.2;">{icon}</div>
-                        <div style="font-size:13px;font-weight:700;color:{"white" if active else SUB};
-                            font-family:Cairo,sans-serif;margin-top:4px;">{label}</div>
-                    </div>"""
-
-                st.markdown(f"""<div style="display:grid;grid-template-columns:repeat(3,1fr);
-                    gap:8px;margin:8px 0 16px;direction:rtl;">{cards}</div>""",
-                    unsafe_allow_html=True)
-
-                # أزرار مخفية
-                hide = "position:fixed;opacity:0;pointer-events:none;width:1px;height:1px;"
-                for _, _, mode, _ in modes:
-                    st.markdown(f'<div style="{hide}">', unsafe_allow_html=True)
-                    clicked = st.button("x", key=f"mdbtn_{mode}")
-                    st.markdown('</div>', unsafe_allow_html=True)
-                    if clicked:
-                        if mode == "study":
-                            st.session_state.quiz_active = False; st.rerun()
-                        else:
-                            start_quiz(mode)
+                if r1c1.button("📖 دراسة", use_container_width=True,
+                               type="primary" if not st.session_state.quiz_active else "secondary"):
+                    st.session_state.quiz_active = False; st.rerun()
+                if mode_btn(r1c2,"📝 اختبار","normal"): start_quiz("normal")
+                if mode_btn(r1c3,"🔊 استماع","listen"): start_quiz("listen")
+                if mode_btn(r1c4,"⏱️ مؤقت","timer"): start_quiz("timer")
+                if mode_btn(r2c1,"🎯 اختيار متعدد","mcq"): start_quiz("mcq")
+                if mode_btn(r2c2,"🔤 اختبار عكسي","reverse"): start_quiz("reverse")
+                if mode_btn(r2c3,"🔁 تكرار ذكي","smart"): start_quiz("smart")
 
                 st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -594,20 +500,13 @@ else:
 
                     st.markdown("<br>", unsafe_allow_html=True)
                     for item in items:
-                        st.markdown(f"""
-                        <div class='anki-card'>
-                            <div class='anki-header'>
-                                <div class='anki-en'>{item['en']}</div>
-                            </div>
-                            <div class='anki-body'>
-                                <div class='anki-ar'>{item['ar']}</div>
-                                <div class='anki-pron'>{item['pron']}</div>
-                            </div>
-                            <div class='anki-footer'>
-                            </div>
-                        </div>""", unsafe_allow_html=True)
+                        st.markdown(
+                            f"<div class='card'><div class='en-text'>{item['en']}</div>"
+                            f"<div class='ar-text'>{item['ar']}</div>"
+                            f"<div class='pron-box'>{item['pron']}</div></div>",
+                            unsafe_allow_html=True)
                         render_audio(ensure_audio(item["en"], v_id, selected_speed))
-                        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                        st.markdown("<hr>", unsafe_allow_html=True)
                 else:
                     mode = st.session_state.quiz_mode
                     if mode == "smart":
@@ -676,24 +575,24 @@ else:
                             st.session_state.timer_expired=True; st.rerun()
 
                     if mode=="listen":
-                        st.markdown(f"<div class='quiz-card slide-up'><div class='quiz-hint'>🔊 استمع واكتب الترجمة العربية</div>"
+                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>🔊 استمع واكتب الترجمة العربية</div>"
                             f"<div style='font-size:60px;margin:20px 0;'>👂</div>"
                             f"<div class='quiz-hint' style='color:#7c3aed;'>اضغط تشغيل واستمع</div></div>", unsafe_allow_html=True)
                     elif mode=="reverse":
-                        st.markdown(f"<div class='quiz-card slide-up'><div class='quiz-hint'>🔤 اكتب هذه الكلمة/الجملة بالإنجليزية</div>"
+                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>🔤 اكتب هذه الكلمة/الجملة بالإنجليزية</div>"
                             f"<div class='quiz-ar'>{item['ar']}</div>"
                             f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
                     elif mode=="mcq":
-                        st.markdown(f"<div class='quiz-card slide-up'><div class='quiz-hint'>🎯 اختر الترجمة الصحيحة</div>"
+                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>🎯 اختر الترجمة الصحيحة</div>"
                             f"<div class='quiz-en'>{item['en']}</div>"
                             f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
                     elif mode=="smart":
                         st.markdown(f"<div class='repeat-badge'>🔁 تكرار ذكي — الجولة {st.session_state.smart_round}</div>", unsafe_allow_html=True)
-                        st.markdown(f"<div class='quiz-card slide-up'><div class='quiz-hint'>💡 ما معنى هذه الكلمة/الجملة بالعربية؟</div>"
+                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>💡 ما معنى هذه الكلمة/الجملة بالعربية؟</div>"
                             f"<div class='quiz-en'>{item['en']}</div>"
                             f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
                     else:
-                        st.markdown(f"<div class='quiz-card slide-up'><div class='quiz-hint'>💡 ما معنى هذه الكلمة/الجملة بالعربية؟</div>"
+                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>💡 ما معنى هذه الكلمة/الجملة بالعربية؟</div>"
                             f"<div class='quiz-en'>{item['en']}</div>"
                             f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
 
