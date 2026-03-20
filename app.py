@@ -416,13 +416,8 @@ else:
 
         # ══ تبويب التعلم ══
         with main_tab1:
-
-            # ── اختيار القسم + بحث في صف واحد ──
-            c_sel, c_search = st.columns([3, 2])
-            with c_sel:
-                choice = st.selectbox("", cat_names, label_visibility="collapsed", placeholder="اختر القسم...")
-            with c_search:
-                search_q = st.text_input("", placeholder="🔍 بحث سريع...", key="search_q", label_visibility="collapsed")
+            choice = st.selectbox("📂 القسم:", cat_names, label_visibility="visible")
+            search_q = st.text_input("", placeholder="🔍 بحث سريع...", key="search_q", label_visibility="collapsed")
 
             # ── الإعدادات في صف واحد مدمج ──
             with st.expander("⚙️ إعدادات الصوت والعرض", expanded=False):
@@ -460,43 +455,48 @@ else:
                         "timer_start":time.time(),"timer_expired":False,
                     }); st.rerun()
 
-                # ── أزرار الأوضاع في شبكة 3×3 مريحة ──
-                MODES = [
-                    ("📖 دراسة",        None,      False),
-                    ("📝 اختبار",       "normal",  False),
-                    ("🔊 استماع",       "listen",  False),
-                    ("⏱️ مؤقت",         "timer",   False),
-                    ("🎯 اختيار متعدد","mcq",     False),
-                    ("🔤 اختبار عكسي", "reverse", False),
-                    ("🔁 تكرار ذكي",   "smart",   False),
+                active_mode = st.session_state.quiz_mode if st.session_state.quiz_active else "study"
+
+                modes = [
+                    ("📖","دراسة","study","#2563eb"),
+                    ("📝","اختبار","normal","#7c3aed"),
+                    ("🔊","استماع","listen","#059669"),
+                    ("⏱️","مؤقت","timer","#d97706"),
+                    ("🎯","اختيار متعدد","mcq","#dc2626"),
+                    ("🔤","اختبار عكسي","reverse","#0891b2"),
+                    ("🔁","تكرار ذكي","smart","#a855f7"),
                 ]
 
-                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-                r1 = st.columns(3)
-                r2 = st.columns(3)
-                r3 = st.columns(3)
+                cards = ""
+                for icon, label, mode, color in modes:
+                    active = mode == active_mode
+                    bg = f"{color}30" if active else CARD_BG
+                    border = f"2.5px solid {color}" if active else f"1.5px solid {BORDER}"
+                    shadow = f"0 0 14px {color}55" if active else "none"
+                    cards += f"""<div onclick="document.getElementById('mdbtn_{mode}').click()"
+                        style="background:{bg};border:{border};border-radius:14px;
+                        padding:14px 6px;text-align:center;cursor:pointer;
+                        box-shadow:{shadow};transition:all 0.2s;">
+                        <div style="font-size:26px;line-height:1.2;">{icon}</div>
+                        <div style="font-size:13px;font-weight:700;color:{"white" if active else SUB};
+                            font-family:Cairo,sans-serif;margin-top:4px;">{label}</div>
+                    </div>"""
 
-                def is_active(mode):
-                    if mode is None: return not st.session_state.quiz_active
-                    return st.session_state.quiz_active and st.session_state.quiz_mode == mode
+                st.markdown(f"""<div style="display:grid;grid-template-columns:repeat(3,1fr);
+                    gap:8px;margin:8px 0 16px;direction:rtl;">{cards}</div>""",
+                    unsafe_allow_html=True)
 
-                all_cols = r1 + r2 + r3
-                mode_data = [
-                    ("📖 دراسة", None), ("📝 اختبار","normal"), ("🔊 استماع","listen"),
-                    ("⏱️ مؤقت","timer"), ("🎯 اختيار متعدد","mcq"), ("🔤 اختبار عكسي","reverse"),
-                    ("🔁 تكرار ذكي","smart"),
-                ]
-
-                for i, (label, mode) in enumerate(mode_data):
-                    active = is_active(mode)
-                    with all_cols[i]:
-                        if st.button(label, use_container_width=True,
-                            type="primary" if active else "secondary",
-                            key=f"mdbtn_{i}"):
-                            if mode is None:
-                                st.session_state.quiz_active = False; st.rerun()
-                            else:
-                                start_quiz(mode)
+                # أزرار مخفية
+                hide = "position:fixed;opacity:0;pointer-events:none;width:1px;height:1px;"
+                for _, _, mode, _ in modes:
+                    st.markdown(f'<div style="{hide}">', unsafe_allow_html=True)
+                    clicked = st.button("x", key=f"mdbtn_{mode}")
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    if clicked:
+                        if mode == "study":
+                            st.session_state.quiz_active = False; st.rerun()
+                        else:
+                            start_quiz(mode)
 
                 st.markdown("<hr>", unsafe_allow_html=True)
 
