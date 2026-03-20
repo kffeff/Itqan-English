@@ -676,24 +676,24 @@ else:
                             st.session_state.timer_expired=True; st.rerun()
 
                     if mode=="listen":
-                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>🔊 استمع واكتب الترجمة العربية</div>"
+                        st.markdown(f"<div class='quiz-card slide-up'><div class='quiz-hint'>🔊 استمع واكتب الترجمة العربية</div>"
                             f"<div style='font-size:60px;margin:20px 0;'>👂</div>"
                             f"<div class='quiz-hint' style='color:#7c3aed;'>اضغط تشغيل واستمع</div></div>", unsafe_allow_html=True)
                     elif mode=="reverse":
-                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>🔤 اكتب هذه الكلمة/الجملة بالإنجليزية</div>"
+                        st.markdown(f"<div class='quiz-card slide-up'><div class='quiz-hint'>🔤 اكتب هذه الكلمة/الجملة بالإنجليزية</div>"
                             f"<div class='quiz-ar'>{item['ar']}</div>"
                             f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
                     elif mode=="mcq":
-                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>🎯 اختر الترجمة الصحيحة</div>"
+                        st.markdown(f"<div class='quiz-card slide-up'><div class='quiz-hint'>🎯 اختر الترجمة الصحيحة</div>"
                             f"<div class='quiz-en'>{item['en']}</div>"
                             f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
                     elif mode=="smart":
                         st.markdown(f"<div class='repeat-badge'>🔁 تكرار ذكي — الجولة {st.session_state.smart_round}</div>", unsafe_allow_html=True)
-                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>💡 ما معنى هذه الكلمة/الجملة بالعربية؟</div>"
+                        st.markdown(f"<div class='quiz-card slide-up'><div class='quiz-hint'>💡 ما معنى هذه الكلمة/الجملة بالعربية؟</div>"
                             f"<div class='quiz-en'>{item['en']}</div>"
                             f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
                     else:
-                        st.markdown(f"<div class='quiz-card'><div class='quiz-hint'>💡 ما معنى هذه الكلمة/الجملة بالعربية؟</div>"
+                        st.markdown(f"<div class='quiz-card slide-up'><div class='quiz-hint'>💡 ما معنى هذه الكلمة/الجملة بالعربية؟</div>"
                             f"<div class='quiz-en'>{item['en']}</div>"
                             f"<div class='quiz-hint' style='color:#7c3aed;font-size:20px;'>النطق: {item['pron']}</div></div>", unsafe_allow_html=True)
 
